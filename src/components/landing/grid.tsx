@@ -2,24 +2,15 @@
 
 import { useEffect, useRef } from "react";
 
-interface Tile {
-  x: number;
-  y: number;
-  opacity: number;
-  target: number;
-}
-
 export function CanvasGridBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const tilesRef = useRef<Tile[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
-    
-    const GRID = 30;                 // 👈 grid size (smaller = denser)
-    const SAFE_ZONE_RATIO = 0.25;    // 👈 25% left & right kept clean
-    const MAX_TILES = 4;
+
+    const GRID = 30;                // grid size
+    const RIGHT_BLOCK_RATIO = 0.28; // 28% of screen on the right
 
     let cols = 0;
     let rows = 0;
@@ -27,14 +18,17 @@ export function CanvasGridBackground() {
     function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+
       cols = Math.ceil(canvas.width / GRID);
       rows = Math.ceil(canvas.height / GRID);
+
+      draw(); // redraw on resize
     }
 
-    function drawGrid() {
+    function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // --- GRID LINES ---
+      // ---------------- GRID LINES ----------------
       ctx.strokeStyle = "rgba(180,180,180,0.15)";
       ctx.lineWidth = 1;
 
@@ -52,56 +46,24 @@ export function CanvasGridBackground() {
         ctx.stroke();
       }
 
-      // --- BLINKING TILE COLOR ---
-      const glow = "80,160,255"; // blue (change this freely)
+      // ---------------- RIGHT SIDE BLOCK ----------------
+      const blockStartCol = Math.floor(cols * (1 - RIGHT_BLOCK_RATIO));
 
-      tilesRef.current.forEach((t) => {
-        ctx.shadowBlur = 35 * t.opacity;
-        ctx.shadowColor = `rgba(${glow}, ${0.5 * t.opacity})`;
+      ctx.fillStyle = "rgba(180,180,180,0.08)";
 
-        ctx.fillStyle = `rgba(${glow}, ${0.1 * t.opacity})`;
-        ctx.fillRect(t.x * GRID, t.y * GRID, GRID, GRID);
-      });
-
-      ctx.shadowBlur = 0;
-    }
-
-    function animate() {
-      drawGrid();
-
-      // Smooth fade
-      tilesRef.current.forEach((t) => {
-        t.opacity += (t.target - t.opacity) * 0.08;
-      });
-
-      tilesRef.current = tilesRef.current.filter(
-        (t) => t.opacity > 0.01
-      );
-
-      // --- SPAWN NEW TILE (CENTER ONLY) ---
-      if (Math.random() < 0.02 && tilesRef.current.length < MAX_TILES) {
-        const safeStart = Math.floor(cols * SAFE_ZONE_RATIO);
-        const safeEnd = Math.floor(cols * (1 - SAFE_ZONE_RATIO));
-
-        const x = Math.floor(
-          safeStart + Math.random() * (safeEnd - safeStart)
-        );
-
-        const y = Math.floor(Math.random() * rows);
-
-        const tile: Tile = { x, y, opacity: 0, target: 1 };
-        tilesRef.current.push(tile);
-
-        setTimeout(() => {
-          tile.target = 0;
-        }, 1500);
+      for (let x = blockStartCol; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+          ctx.fillRect(
+            x * GRID,
+            y * GRID,
+            GRID,
+            GRID
+          );
+        }
       }
-
-      requestAnimationFrame(animate);
     }
 
     resize();
-    animate();
     window.addEventListener("resize", resize);
 
     return () => window.removeEventListener("resize", resize);

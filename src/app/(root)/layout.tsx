@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, DM_Sans } from "next/font/google";
-import "./globals.css";
-import { MobileProvider } from "@/hooks/useMobile";
+import "@/app/globals.css";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -30,10 +29,8 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <MobileProvider>
-     
-          {children}
-        </MobileProvider>
+
+        {children}
       </body>
     </html>
   );
