@@ -29,6 +29,10 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <script
+          src="http://localhost:3000/tracker.js"
+          data-project-id="prj_5eklxgbgn1hmjg80ueq"
+        ></script>
 
         {children}
       </body>

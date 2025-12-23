@@ -7,39 +7,33 @@ import { motion, useAnimation } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
-export interface ChartSplineIconHandle {
+export interface FolderCogIconHandle {
     startAnimation: () => void;
     stopAnimation: () => void;
 }
 
-interface ChartSplineIconProps extends HTMLAttributes<HTMLDivElement> {
+interface FolderCogIconProps extends HTMLAttributes<HTMLDivElement> {
     size?: number;
 }
 
-const VARIANTS: Variants = {
-    normal: {
-        pathLength: 1,
-        opacity: 1,
-    },
-    animate: {
-        pathLength: [0, 1],
-        opacity: [0, 1],
+const G_VARIANTS: Variants = {
+    spinning: {
+        rotate: 360,
         transition: {
-            delay: 0.15,
-            duration: 0.3,
-            opacity: { delay: 0.1 },
+            repeat: Infinity,
+            ease: "linear",
+            duration: 1,
         },
     },
 };
 
-const ChartSplineIcon = forwardRef<ChartSplineIconHandle, ChartSplineIconProps>(
-    ({ onMouseEnter, onMouseLeave, className, size = 15, ...props }, ref) => {
+const FolderCogIcon = forwardRef<FolderCogIconHandle, FolderCogIconProps>(
+    ({ onMouseEnter, onMouseLeave, className, size = 18, ...props }, ref) => {
         const controls = useAnimation();
         const isControlledRef = useRef(false);
 
         useImperativeHandle(ref, () => {
             isControlledRef.current = true;
-
             return {
                 startAnimation: () => controls.start('animate'),
                 stopAnimation: () => controls.start('normal'),
@@ -86,18 +80,28 @@ const ChartSplineIcon = forwardRef<ChartSplineIconHandle, ChartSplineIconProps>(
                     strokeLinecap="round"
                     strokeLinejoin="round"
                 >
-                    <path d="M3 3v16a2 2 0 0 0 2 2h16" />
-                    <motion.path
-                        d="M7 16c.5-2 1.5-7 4-7 2 0 2 3 4 3 2.5 0 4.5-5 5-7"
-                        variants={VARIANTS}
-                        animate={controls}
-                    />
+                    <path d="M10.3 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.98a2 2 0 0 1 1.69.9l.66 1.2A2 2 0 0 0 12 6h8a2 2 0 0 1 2 2v3.3" />
+                    <motion.g
+                        transition={{ type: 'spring', stiffness: 50, damping: 10 }}
+                        variants={G_VARIANTS}
+                        animate='spinning'
+                    >
+                        <path d="m14.305 19.53.923-.382" />
+                        <path d="m15.228 16.852-.923-.383" />
+                        <path d="m16.852 15.228-.383-.923" />
+                        <path d="m16.852 20.772-.383.924" />
+                        <path d="m19.148 15.228.383-.923" />
+                        <path d="m19.53 21.696-.382-.924" />
+                        <path d="m20.772 16.852.924-.383" />
+                        <path d="m20.772 19.148.924.383" />
+                        <circle cx="18" cy="18" r="3" />
+                    </motion.g>
                 </svg>
             </div>
         );
     }
 );
 
-ChartSplineIcon.displayName = 'ChartSplineIcon';
+FolderCogIcon.displayName = 'FolderCogIcon';
 
-export { ChartSplineIcon };
+export { FolderCogIcon };

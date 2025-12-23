@@ -10,6 +10,7 @@ import { ChartSplineIcon } from "@/components/icons/chart.icon";
 import { ActivityIcon } from "@/components/icons/chart_line";
 import { GradientBarMultipleChart } from "@/components/ui/gradient-bar-multiple-chart";
 import TrackingScript from "@/components/analytics/tracking-script";
+import { Slash, Globe } from "lucide-react";
 
 type PageParams = Promise<{ slug: string }>;
 
@@ -168,34 +169,27 @@ export default async function ProjectAnalyticsPage({
           <Block
             title="Total visits"
             value={project.analytics.totalVisits}
-            icon={<GaugeIcon />}
+            icon={<GaugeIcon className="text-muted-foreground" />}
+
           />
 
           <Block
             title="Pageviews"
             value={project.analytics.totalPageVisits}
-            icon={<EyeIcon />}
+            icon={<EyeIcon className="text-muted-foreground" />}
           />
 
           <Block
             title="Bounce rate"
             value={project.analytics.bounceRate}
-            icon={<ChartSplineIcon />}
+            icon={<ChartSplineIcon className="text-muted-foreground" />}
           />
 
           <Block
             title="Avg duration"
             value={project.analytics.avgDuration}
-            icon={<ActivityIcon />}
+            icon={<ActivityIcon className="text-muted-foreground" />}
           />
-
-
-
-
-
-
-
-
         </section>
 
         {/* Chart */}
@@ -204,12 +198,18 @@ export default async function ProjectAnalyticsPage({
         {/* Real-time breakdowns */}
         <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,300px)_1fr] gap-3.5 font-sans">
           {/* Top Pages */}
-          <div className="min-h-[420px] w-full bg-gray-100 rounded-[6px] flex flex-col">
-            <h2 className="text-sm font-semibold text-muted-foreground py-1 px-2">
-              Top Pages
-            </h2>
+          <div className="min-h-[420px] w-full bg-gray-100 rounded-[6px] flex flex-col border border-stone-200">
+            <div className="flex items-center justify-between py-[2px] px-[2px] border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-foreground/80  px-2">
+                Top Pages
+              </h2>
+              <span className="p-1 bg-white shadow-md rounded-[4.5px]">
+                <Slash className="size-3 text-muted-foreground" />
+              </span>
+            </div>
 
-            <div className="flex-1 bg-bg-primary shadow-sm overflow-y-auto w-full rounded-[4px] p-4">
+
+            <div className="flex-1 bg-bg-primary  overflow-y-auto w-full mx-auto rounded-[8px] rounded-t-none p-4">
               <div className="flex items-center justify-end gap-2 pb-4 font-semibold font-sans text-xs">
                 <div className="bg-stone-200 rounded-[4px] px-2 py-1">
                   <span>Hits</span>
@@ -241,7 +241,7 @@ export default async function ProjectAnalyticsPage({
 
 
           {/* Device / Browser */}
-          <div className=" border w-full h-[420px]">
+          <div className="  w-full">
             <GradientBarMultipleChart
               data={trafficData}
               title="Recent Traffic"
@@ -251,14 +251,20 @@ export default async function ProjectAnalyticsPage({
 
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 font-sans">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,300px)_1fr] gap-3.5 font-sans">
           {/* Top Browsers */}
-          <div className="min-h-[320px] w-full bg-gray-100 rounded-[6px] flex flex-col">
-            <h2 className="text-sm font-semibold text-muted-foreground py-1 px-2">
-              Top Browsers
-            </h2>
+          <div className="min-h-[420px] w-full bg-gray-100 rounded-[6px] flex flex-col border border-stone-200">
+            <div className="flex items-center justify-between py-[2px] px-[2px] border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-foreground/80  px-2">
+                Top Browsers
+              </h2>
+              <span className="p-1 bg-white shadow-md rounded-[4.5px]">
+                <Globe className="size-3.5 text-muted-foreground" />
+              </span>
+            </div>
 
-            <div className="flex-1 bg-bg-primary shadow-sm overflow-y-auto w-full rounded-[4px] p-4">
+
+            <div className="flex-1 bg-bg-primary  overflow-y-auto w-full mx-auto rounded-[8px] rounded-t-none p-4">
               <div className="flex items-center justify-end gap-2 pb-4 font-semibold font-sans text-xs">
                 <div className="bg-stone-200 rounded-[4px] px-2 py-1">
                   <span>Usage</span>

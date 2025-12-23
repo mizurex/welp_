@@ -31,11 +31,11 @@ interface GradientBarMultipleChartProps {
 const chartConfig = {
   visitors: {
     label: "Visitors",
-    color: "#2563eb",
+    color: "#56361d",
   },
   views: {
     label: "Views",
-    color: "#7c3aed",
+    color: "#4b2f19ff",
   },
 } satisfies ChartConfig;
 
@@ -45,17 +45,17 @@ export function GradientBarMultipleChart({
   description = "Total visitors and views"
 }: GradientBarMultipleChartProps) {
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className="h-full py-[7px]   bg-bg-primary rounded-[6px] border border-stone-300 shadow-none font-sans">
+      <CardHeader className="">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle className="text-foreground/80 font-medium text-lg">{title}</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-xs">{description}</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        <ChartContainer config={chartConfig} className="border-stone-200 rounded-md">
           <BarChart accessibilityLayer data={data}>
             <XAxis
               dataKey="label"

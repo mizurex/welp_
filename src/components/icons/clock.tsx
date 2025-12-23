@@ -24,7 +24,7 @@ const DEFAULT_TRANSITION: Transition = {
 };
 
 const GaugeIcon = forwardRef<GaugeIconHandle, GaugeIconProps>(
-    ({ onMouseEnter, onMouseLeave, className, size = 25, ...props }, ref) => {
+    ({ onMouseEnter, onMouseLeave, className, size = 15, ...props }, ref) => {
         const controls = useAnimation();
         const isControlledRef = useRef(false);
 

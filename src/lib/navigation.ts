@@ -29,14 +29,14 @@ export type NavigationSection = {
 // Dashboard navigation sections (like Umami)
 export const dashboardNavigation: NavigationSection[] = [
   {
-    title: "Traffic",
+    title: "",
     items: [
-      { title: "All projects", href: "/dashboard/analytics", icon: Eye },
-      { title: "Analytics", href: "/dashboard/analytics", icon: Zap },
+      { title: "Projects", href: "/dashboard/analytics", icon: Eye },
+      { title: "Overview", href: "/dashboard/analytics", icon: Eye },
+      { title: "Traffic", href: "/dashboard/analytics", icon: Zap },
       { title: "Sessions", href: "/dashboard/analytics/sessions", icon: Users },
       { title: "Events", href: "/dashboard/analytics/events", icon: Clock },
-      { title: "Compare", href: "/dashboard/analytics/compare", icon: GitCompare },
-      { title: "Breakdown", href: "/dashboard/analytics/breakdown", icon: LayoutGrid },
+      { title: "Settings", href: "/dashboard/analytics/breakdown", icon: LayoutGrid },
     ],
   }
 ];
