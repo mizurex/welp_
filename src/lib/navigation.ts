@@ -12,6 +12,7 @@ import {
   PieChart,
   UsersRound,
   type LucideIcon,
+  BarChart,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -32,11 +33,8 @@ export const dashboardNavigation: NavigationSection[] = [
     title: "",
     items: [
       { title: "Projects", href: "/dashboard/analytics", icon: Eye },
-      { title: "Overview", href: "/dashboard/analytics", icon: Eye },
-      { title: "Traffic", href: "/dashboard/analytics", icon: Zap },
-      { title: "Sessions", href: "/dashboard/analytics/sessions", icon: Users },
-      { title: "Events", href: "/dashboard/analytics/events", icon: Clock },
-      { title: "Settings", href: "/dashboard/analytics/breakdown", icon: LayoutGrid },
+      { title: "Overview", href: "/dashboard/analytics", icon: BarChart },
+      { title: "Settings", href: "/dashboard/settings/", icon: LayoutGrid },
     ],
   }
 ];

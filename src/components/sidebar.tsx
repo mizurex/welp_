@@ -208,19 +208,19 @@ export function Sidebar({ className, projects = [] }: SidebarProps) {
 
           {/* Navigation Sections */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-6">
-            {dashboardNavigation.map((section) => (
-              <div key={section.title}>
+            {dashboardNavigation.map((section, index) => (
+              <div key={section.title || index}>
                 <h3 className="px-3 mb-2 text-xs font-semibold text-black uppercase tracking-wider">
                   {section.title}
                 </h3>
                 <div className="space-y-0.5">
                   {section.items.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                     const Icon = item.icon;
                     return (
                       <Link
-                        key={item.href}
-                        href={item.href}
+                        key={`${section.title}-${item.title}`}
+                        href={item.title === "Settings" ? `${item.href}${activeProject?.publicId || ""}` : item.href}
                         onClick={closeMobileMenu}
                         className={cn(
                           "flex items-center gap-3 px-3 py-3 font-sans text-sm font-medium rounded-[6px]  transition-colors",

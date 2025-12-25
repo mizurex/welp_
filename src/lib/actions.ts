@@ -60,6 +60,52 @@ export async function createProject(formData: FormData) {
     redirect(`/dashboard/analytics/${projectId}`);
 }
 
+export async function updateProject(projectId: string, formData: FormData) {
+    const session = await auth();
+
+    if (!session || !session.user || !session.user.email) {
+        throw new Error("Unauthorized");
+    }
+
+    const nameValue = formData.get("name");
+    const name = typeof nameValue === "string" ? nameValue.trim() : "";
+
+    if (!name) {
+        throw new Error("Name is required");
+    }
+
+    await prisma.project.update({
+        where: { publicId: projectId },
+        data: { name },
+    });
+
+    revalidatePath(`/dashboard/settings/${projectId}`);
+    revalidatePath("/dashboard/analytics");
+}
+
+export async function updateProjectDomain(projectId: string, formData: FormData) {
+    const session = await auth();
+
+    if (!session || !session.user || !session.user.email) {
+        throw new Error("Unauthorized");
+    }
+
+    const domainValue = formData.get("domain");
+    const domain = typeof domainValue === "string" ? domainValue.trim() : "";
+
+    if (!domain) {
+        throw new Error("Domain is required");
+    }
+
+    await prisma.project.update({
+        where: { publicId: projectId },
+        data: { domain },
+    });
+
+    revalidatePath(`/dashboard/settings/${projectId}`);
+    revalidatePath("/dashboard/analytics");
+}
+
 export async function deleteProject(projectId: string) {
     const session = await auth();
 
@@ -91,4 +137,5 @@ export async function deleteProject(projectId: string) {
     });
 
     revalidatePath("/dashboard/analytics");
+    redirect("/dashboard/analytics");
 }

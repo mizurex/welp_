@@ -71,7 +71,7 @@ export default async function DashboardPage() {
 
 
           <Block
-            title="Pageviews"
+            title="Combined Views"
             value={totalPageviews}
             icon={<EyeIcon className="text-muted-foreground" />}
           />
