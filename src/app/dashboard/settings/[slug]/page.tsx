@@ -143,32 +143,17 @@ export default async function ProjectSettingsPage({
                     </div>
 
                     {/* Danger Zone Block (Wide) */}
-                    <div className="md:col-span-2 rounded-[6px] bg-white flex flex-col text-foreground border border-blue-200">
-                        <div className="flex items-center rounded-[6px] rounded-b-none justify-between pl-[10px] pr-[3px] bg-blue-50/50 border-b border-blue-100 gap-[4px] py-[4px]">
-                            <p className="text-sm font-semibold text-blue-900 uppercase tracking-widest">
-                                Danger Zone
-                            </p>
-                            <div className="p-1 bg-white shadow-sm rounded-[4.5px]">
-                                <AlertTriangle className="size-3.5 text-blue-600" />
-                            </div>
-                        </div>
-
-                        <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="space-y-1">
-                                <h3 className="text-sm font-bold text-stone-900">Delete Project</h3>
-                                <p className="text-xs text-stone-500 leading-relaxed max-w-xl">
-                                    Once you delete a project, there is no going back. Please be certain. All data, settings and history will be permanently erased.
-                                </p>
-                            </div>
-                            <form action={deleteProject.bind(null, project.publicId)}>
+                    <div className="flex">
+                    <form action={deleteProject.bind(null, project.publicId)}>
                                 <button
                                     type="submit"
-                                    className="px-6 py-2 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-widest rounded-md hover:bg-blue-700 transition-all shadow-sm active:scale-95"
+                                    className="px-6 py-2 bg-red-600 text-white text-[11px] font-bold uppercase tracking-widest rounded-md hover:bg-red-700 transition-all shadow-sm active:scale-95"
                                 >
                                     Delete Permanently
                                 </button>
                             </form>
-                        </div>
+
+                        
                     </div>
 
                 </div>

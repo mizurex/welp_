@@ -295,11 +295,8 @@ export default async function ProjectAnalyticsPage({
 
           {/* Add more breakdown cards here if needed */}
         </div>
-        {/* Tracking script */}
-        <TrackingScript
-          projectPublicId={project.publicId}
-          baseUrl={trackingEndpoint}
-        />
+       
+     
       </main>
     </div>
   );

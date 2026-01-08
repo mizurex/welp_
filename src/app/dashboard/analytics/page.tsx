@@ -2,14 +2,10 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { auth } from "../../../../auth";
 import { redirect } from "next/navigation";
-import { MobileMenuButton } from "@/components/mobile-menu-button";
 import Block from "@/components/blocks";
-import { GaugeIcon } from "@/components/icons/clock";
 import { EyeIcon } from "@/components/icons/eye";
-import { ChartSplineIcon } from "@/components/icons/chart.icon";
-import { ActivityIcon } from "@/components/icons/chart_line";
 import { CreateProjectSheet } from "@/components/analytics/create-project-sheet";
-import { Plus, LayoutGrid, ExternalLink, Trash2, CheckCircle2 } from "lucide-react";
+import { LayoutGrid, ExternalLink, Trash2, CheckCircle2 } from "lucide-react";
 import { deleteProject } from "@/lib/actions";
 
 export default async function DashboardPage() {
@@ -103,9 +99,9 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="flex flex-col bg-white border border-stone-200 rounded-[8px] overflow-hidden shadow-sm">
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_80px] items-center px-6 py-3 bg-stone-50 border-b border-stone-200 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                <span>Project Name</span>
-                <span>Domain</span>
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_80px] items-center px-6 py-3 bg-stone-50 border-b border-stone-200 text-[10px] font-bold text-zinc-500 uppercase">
+                <span className="text-left">Alias</span>
+                <span className="text-left">Domain</span>
                 <span>Status</span>
                 <span className="text-right px-2">Action</span>
               </div>
@@ -140,7 +136,7 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
                         <CheckCircle2 className="size-3 text-emerald-500" />
-                        <span className="text-[10px] font-bold text-emerald-600 uppercase">In Sync</span>
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase whitespace-nowrap">In Sync</span>
                       </div>
                     </div>
 

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Check, Copy, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface TrackingScriptProps {
     projectPublicId: string;
@@ -16,8 +18,25 @@ export default function TrackingScript({ projectPublicId, baseUrl }: TrackingScr
     const trackerUrl = `${baseUrl}/tracker.js`;
 
     const snippets = {
-        js: `<script \n  src="${trackerUrl}" \n  data-project-id="${projectPublicId}"\n></script>`,
-        next: `import Script from "next/script";\n\nexport default function RootLayout({ children }) {\n  return (\n    <html>\n      <body>\n        {children}\n        <Script \n          src="${trackerUrl}" \n          data-project-id="${projectPublicId}" \n        />\n      </body>\n    </html>\n  );\n}`,
+        js: `<script 
+  src="${trackerUrl}" 
+  data-project-id="${projectPublicId}"
+></script>`,
+        next: `import Script from "next/script";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Script 
+          src="${trackerUrl}" 
+          data-project-id="${projectPublicId}" 
+        />
+      </body>
+    </html>
+  );
+}`,
     };
 
     const copyToClipboard = () => {
@@ -28,7 +47,7 @@ export default function TrackingScript({ projectPublicId, baseUrl }: TrackingScr
 
     return (
         <section className="bg-white border border-stone-200 rounded-[6px] overflow-hidden shadow-sm font-sans">
-            <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
+            <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-white">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-white border border-stone-200 rounded-md shadow-sm">
                         <Terminal className="w-4 h-4 text-stone-600" />
@@ -83,17 +102,27 @@ export default function TrackingScript({ projectPublicId, baseUrl }: TrackingScr
                     <span className="pointer-events-none absolute left-0 bottom-0 h-3 w-3 border-l border-b border-stone-300 group-hover:border-primary transition-all rounded-bl-sm" />
                     <span className="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-stone-300 group-hover:border-primary transition-all rounded-br-sm" />
 
-                    <div className="bg-stone-950 rounded-lg p-5 overflow-x-auto min-h-[160px] flex items-center">
-                        <pre className="text-xs md:text-sm font-mono text-stone-300 leading-relaxed">
-                            <code>{snippets[activeTab]}</code>
-                        </pre>
+                    <div className="overflow-hidden">
+                        <SyntaxHighlighter
+                            language={activeTab === "js" ? "html" : "jsx"}
+                            style={oneLight}
+                            customStyle={{
+                                margin: 0,
+                                padding: "1.25rem",
+                                fontSize: "0.875rem",
+                                fontWeight: "500",
+                                lineHeight: "1.6",
+                                minHeight: "160px",
+                                borderRadius: "0.5rem",
+                            }}
+                            showLineNumbers={false}
+                        >
+                            {snippets[activeTab]}
+                        </SyntaxHighlighter>
                     </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2 text-[11px] text-stone-400">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span>Script is ready to deploy. Data will appear automatically within seconds.</span>
-                </div>
+
             </div>
         </section>
     );

@@ -36,7 +36,7 @@ model Project {
 
 model Analytics {
   id              Int      @id @default(autoincrement())
-  projectId       Int      @unique
+  projectId       Int      @unique 
   totalPageVisits Int      @default(0)
   totalVisits     Int      @default(0)
   avgDuration     Float?   @default(0)
