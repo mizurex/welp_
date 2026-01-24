@@ -1,5 +1,5 @@
 import { auth } from "../../../../../auth";
-import prisma from "@/lib/prisma";
+import { query, queryOne } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import { updateProject, updateProjectDomain, deleteProject } from "@/lib/actions";
 import TrackingScript from "@/components/analytics/tracking-script";
@@ -7,6 +7,7 @@ import { Settings, Trash2, Globe, LayoutGrid, Fingerprint, ChevronRight, Save, W
 import { MobileMenuButton } from "@/components/mobile-menu-button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import type { User, Project } from "@/types/models";
 
 interface PageProps {
     params: Promise<{ slug: string }>;
@@ -26,17 +27,19 @@ export default async function ProjectSettingsPage({
 
     const email = session.user.email as string;
 
-    const user = await prisma.user.findUnique({
-        where: { email },
-    });
+    const user = await queryOne<User>(
+        `SELECT * FROM "User" WHERE "email" = $1`,
+        [email]
+    );
 
     if (!user) {
         redirect("/");
     }
 
-    const project = await prisma.project.findUnique({
-        where: { publicId: projectPublicId },
-    });
+    const project = await queryOne<Project>(
+        `SELECT * FROM "Project" WHERE "publicId" = $1`,
+        [projectPublicId]
+    );
 
     if (!project || project.ownerId !== user.id) {
         notFound();

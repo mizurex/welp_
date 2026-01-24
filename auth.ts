@@ -1,7 +1,7 @@
-
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import prisma from "@/lib/prisma";
+import { query, queryOne } from "@/lib/db";
+import type { User } from "@/types/models";
 
 function generatePublicId(prefix: string): string {
   const randomPart = Math.random().toString(36).slice(2);
@@ -20,7 +20,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn() {
-      // We do user creation in the jwt callback
       return true;
     },
 
@@ -39,31 +38,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.googleId = googleId;
 
         if (email) {
-          const existing = await prisma.user.findUnique({
-            where: { email },
-          });
+          const existing = await queryOne<User>(
+            `SELECT * FROM "User" WHERE "email" = $1`,
+            [email]
+          );
 
-          let userRecord;
+          let userRecord: User;
 
           if (!existing) {
             const publicId = generatePublicId("usr");
-
-            userRecord = await prisma.user.create({
-              data: {
-                email,
-                name: name || "",
-                publicId,
-                googleId,
-              },
-            });
+            userRecord = (await queryOne<User>(
+              `INSERT INTO "User" ("email", "name", "publicId", "googleId")
+               VALUES ($1, $2, $3, $4)
+               RETURNING *`,
+              [email, name || "", publicId, googleId]
+            ))!;
           } else {
-            userRecord = await prisma.user.update({
-              where: { id: existing.id },
-              data: {
-                name: name || existing.name,
-                googleId: existing.googleId || googleId,
-              },
-            });
+            userRecord = (await queryOne<User>(
+              `UPDATE "User"
+               SET "name" = COALESCE($2, "name"),
+                   "googleId" = COALESCE($3, "googleId")
+               WHERE "id" = $1
+               RETURNING *`,
+              [existing.id, name || existing.name, existing.googleId || googleId]
+            ))!;
           }
 
           (token as any).appUserId = userRecord.publicId;

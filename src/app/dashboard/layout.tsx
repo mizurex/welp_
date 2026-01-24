@@ -1,8 +1,9 @@
 import { MobileProvider } from "@/hooks/useMobile";
 import { Sidebar } from "@/components/sidebar";
-import prisma from "@/lib/prisma";
+import { query } from "@/lib/db";
 import { auth } from "../../../auth";
 import { redirect } from "next/navigation";
+import type { User, Project } from "@/types/models";
 
 export default async function DashboardLayout({
   children,
@@ -17,19 +18,24 @@ export default async function DashboardLayout({
 
   const email = session.user.email as string;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      projects: {
-        orderBy: { id: "desc" },
-      },
-    },
-  });
+  // Get user with their projects
+  const users = await query<User>(
+    `SELECT * FROM "User" WHERE "email" = $1`,
+    [email]
+  );
+  const user = users[0];
+
+  const projects = user
+    ? await query<Project>(
+        `SELECT * FROM "Project" WHERE "ownerId" = $1 ORDER BY "id" DESC`,
+        [user.id]
+      )
+    : [];
 
   return (
     <MobileProvider>
       <div className="min-h-screen bg-bg-primary">
-        <Sidebar projects={user?.projects.map((project) => ({ name: project.name, publicId: project.publicId }))} />
+        <Sidebar projects={projects.map((project) => ({ name: project.name, publicId: project.publicId }))} />
         <div className="md:ml-57">
           <main className="min-h-screen">{children}</main>
         </div>

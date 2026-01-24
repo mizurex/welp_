@@ -1,9 +1,10 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import { query, queryOne, transaction } from "@/lib/db";
 import { auth } from "../../auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { User, Project } from "@/types/models";
 
 function generateProjectId(): string {
     const randomPart = Math.random().toString(36).slice(2);
@@ -21,9 +22,10 @@ export async function createProject(formData: FormData) {
 
     const email = session.user.email as string;
 
-    const user = await prisma.user.findUnique({
-        where: { email },
-    });
+    const user = await queryOne<User>(
+        `SELECT * FROM "User" WHERE "email" = $1`,
+        [email]
+    );
 
     if (!user) {
         return;
@@ -41,19 +43,20 @@ export async function createProject(formData: FormData) {
 
     const projectId = generateProjectId();
 
-    await prisma.project.create({
-        data: {
-            name,
-            domain,
-            publicId: projectId,
-            ownerId: user.id,
-            analytics: {
-                create: {
-                    totalPageVisits: 0,
-                    totalVisits: 0,
-                },
-            },
-        },
+    // Create project and analytics in a transaction
+    await transaction(async (q) => {
+        const project = (await q<Project>(
+            `INSERT INTO "Project" ("publicId", "name", "domain", "ownerId")
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [projectId, name, domain, user.id]
+        ))[0];
+
+        await q(
+            `INSERT INTO "Analytics" ("projectId", "totalPageVisits", "totalVisits", "avgDuration", "bounceRate")
+             VALUES ($1, 0, 0, 0, 0)`,
+            [project.id]
+        );
     });
 
     revalidatePath("/dashboard/analytics");
@@ -74,10 +77,10 @@ export async function updateProject(projectId: string, formData: FormData) {
         throw new Error("Name is required");
     }
 
-    await prisma.project.update({
-        where: { publicId: projectId },
-        data: { name },
-    });
+    await query(
+        `UPDATE "Project" SET "name" = $2 WHERE "publicId" = $1`,
+        [projectId, name]
+    );
 
     revalidatePath(`/dashboard/settings/${projectId}`);
     revalidatePath("/dashboard/analytics");
@@ -97,10 +100,10 @@ export async function updateProjectDomain(projectId: string, formData: FormData)
         throw new Error("Domain is required");
     }
 
-    await prisma.project.update({
-        where: { publicId: projectId },
-        data: { domain },
-    });
+    await query(
+        `UPDATE "Project" SET "domain" = $2 WHERE "publicId" = $1`,
+        [projectId, domain]
+    );
 
     revalidatePath(`/dashboard/settings/${projectId}`);
     revalidatePath("/dashboard/analytics");
@@ -115,25 +118,30 @@ export async function deleteProject(projectId: string) {
 
     const email = session.user.email as string;
 
-    const user = await prisma.user.findUnique({
-        where: { email },
-    });
+    const user = await queryOne<User>(
+        `SELECT * FROM "User" WHERE "email" = $1`,
+        [email]
+    );
 
     if (!user) {
         throw new Error("User not found");
     }
 
-    const project = await prisma.project.findUnique({
-        where: { publicId: projectId },
-    });
+    const project = await queryOne<Project>(
+        `SELECT * FROM "Project" WHERE "publicId" = $1`,
+        [projectId]
+    );
 
     if (!project || project.ownerId !== user.id) {
         throw new Error("Project not found or unauthorized");
     }
 
-    // Delete project
-    await prisma.project.delete({
-        where: { publicId: projectId },
+    // Delete project and related data in a transaction
+    await transaction(async (q) => {
+        await q(`DELETE FROM "PageView" WHERE "projectId" = $1`, [project.id]);
+        await q(`DELETE FROM "Session" WHERE "projectId" = $1`, [project.id]);
+        await q(`DELETE FROM "Analytics" WHERE "projectId" = $1`, [project.id]);
+        await q(`DELETE FROM "Project" WHERE "id" = $1`, [project.id]);
     });
 
     revalidatePath("/dashboard/analytics");

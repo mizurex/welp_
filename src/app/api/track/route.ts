@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { query, queryOne } from "@/lib/db";
+import type { Project, Analytics, Session } from "@/types/models";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 min
 
@@ -20,17 +21,20 @@ export async function POST(req: NextRequest) {
       body = {};
     }
 
-    const { domain, session_id, event, project_id, path, referrer, user_agent } = body;
+    const { session_id, event, project_id, path, referrer, user_agent } = body;
 
     if (!session_id || !project_id) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     // 1. Get Project
-    const project = await prisma.project.findUnique({
-      where: { publicId: project_id },
-      include: { analytics: true }
-    });
+    const project = await queryOne<Project & { analyticsId: number }>(
+      `SELECT p.*, a."id" as "analyticsId"
+       FROM "Project" p
+       LEFT JOIN "Analytics" a ON a."projectId" = p."id"
+       WHERE p."publicId" = $1`,
+      [project_id]
+    );
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -40,112 +44,113 @@ export async function POST(req: NextRequest) {
     const country = req.headers.get("x-vercel-ip-country") || "Unknown";
     const now = new Date();
 
-    // 2. Handle Session
-    let session = await prisma.session.findUnique({
-      where: {
-        projectId_sessionId: {
-          projectId: project.id,
-          sessionId: session_id,
-        },
-      },
-    });
+    // 2. Handle Session (upsert to avoid race conditions)
+    // First, try to get existing session
+    let existingSession = await queryOne<Session>(
+      `SELECT * FROM "Session" WHERE "projectId" = $1 AND "sessionId" = $2`,
+      [project.id, session_id]
+    );
 
     let isNewSession = false;
-    if (!session) {
-      session = await prisma.session.create({
-        data: {
-          projectId: project.id,
-          sessionId: session_id,
-          lastSeen: now,
-          browser,
-          os,
-          device,
-          country,
-          isBounce: true,
-        },
-      });
+    let session: Session;
+
+    if (!existingSession) {
+      // Create new session (use ON CONFLICT to handle race condition)
+      session = (await queryOne<Session>(
+        `INSERT INTO "Session" ("projectId", "sessionId", "lastSeen", "duration", "isBounce", "browser", "os", "device", "country", "createdAt")
+         VALUES ($1, $2, $3, 0, true, $4, $5, $6, $7, $3)
+         ON CONFLICT ("projectId", "sessionId") DO UPDATE SET "lastSeen" = $3
+         RETURNING *`,
+        [project.id, session_id, now, browser, os, device, country]
+      ))!;
       isNewSession = true;
     } else {
-      const diffSinceLastSeen = now.getTime() - session.lastSeen.getTime();
-      const totalDuration = Math.floor((now.getTime() - session.createdAt.getTime()) / 1000);
+      const diffSinceLastSeen = now.getTime() - existingSession.lastSeen.getTime();
+      const totalDuration = Math.floor((now.getTime() - existingSession.createdAt.getTime()) / 1000);
 
       if (diffSinceLastSeen > SESSION_TIMEOUT) {
-        // This is a new session actually, but tracker should have given us a new ID.
-        // If not, we reset it.
-        session = await prisma.session.update({
-          where: { id: session.id },
-          data: {
-            lastSeen: now,
-            createdAt: now,
-            duration: 0,
-            isBounce: true
-          }
-        });
+        // Reset session (timed out)
+        session = (await queryOne<Session>(
+          `UPDATE "Session"
+           SET "lastSeen" = $2, "createdAt" = $2, "duration" = 0, "isBounce" = true
+           WHERE "id" = $1
+           RETURNING *`,
+          [existingSession.id, now]
+        ))!;
         isNewSession = true;
       } else {
-        session = await prisma.session.update({
-          where: { id: session.id },
-          data: {
-            lastSeen: now,
-            duration: totalDuration
-          },
-        });
+        // Update session
+        session = (await queryOne<Session>(
+          `UPDATE "Session"
+           SET "lastSeen" = $2, "duration" = $3
+           WHERE "id" = $1
+           RETURNING *`,
+          [existingSession.id, now, totalDuration]
+        ))!;
       }
     }
 
     // 3. Record PageView if it's a pageview event
     if (event === "pageview") {
-      await prisma.pageView.create({
-        data: {
-          projectId: project.id,
-          sessionId: session_id,
-          path: path || "/",
-          referrer: referrer || null,
-          browser,
-          os,
-          device,
-          country,
-          timestamp: now,
-        },
-      });
+      await query(
+        `INSERT INTO "PageView" ("projectId", "sessionId", "path", "referrer", "browser", "os", "device", "country", "timestamp")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [project.id, session_id, path || "/", referrer || null, browser, os, device, country, now]
+      );
 
       // Update session bounce status
-      const pageViewCount = await prisma.pageView.count({
-        where: { sessionId: session_id, projectId: project.id }
-      });
+      const countResult = await queryOne<{ count: number }>(
+        `SELECT COUNT(*)::int as "count" FROM "PageView" WHERE "projectId" = $1 AND "sessionId" = $2`,
+        [project.id, session_id]
+      );
+      const pageViewCount = countResult?.count ?? 0;
 
-      if (pageViewCount > 1 && session.isBounce) {
-        await prisma.session.update({
-          where: { id: session.id },
-          data: { isBounce: false }
-        });
+      if (pageViewCount > 1 && session?.isBounce) {
+        await query(
+          `UPDATE "Session" SET "isBounce" = false WHERE "id" = $1`,
+          [session!.id]
+        );
       }
     }
 
     // 4. Update Analytics Summary
-    // Note: In a high-traffic app, you'd do this via a background worker or hourly cron.
-    // For now, we update it reactively.
     if (event === "pageview" || isNewSession) {
-      const allSessions = await prisma.session.findMany({
-        where: { projectId: project.id }
-      });
+      const statsResult = await queryOne<{ totalVisits: number; totalBounces: number; totalDuration: number }>(
+        `SELECT 
+           COUNT(*)::int as "totalVisits",
+           SUM(CASE WHEN "isBounce" THEN 1 ELSE 0 END)::int as "totalBounces",
+           SUM("duration")::int as "totalDuration"
+         FROM "Session"
+         WHERE "projectId" = $1`,
+        [project.id]
+      );
 
-      const totalVisits = allSessions.length;
-      const totalBounces = allSessions.filter(s => s.isBounce).length;
+      const totalVisits = statsResult?.totalVisits ?? 0;
+      const totalBounces = statsResult?.totalBounces ?? 0;
+      const totalDuration = statsResult?.totalDuration ?? 0;
       const bounceRate = totalVisits > 0 ? (totalBounces / totalVisits) * 100 : 0;
-
-      const totalDuration = allSessions.reduce((acc, s) => acc + s.duration, 0);
       const avgDuration = totalVisits > 0 ? totalDuration / totalVisits : 0;
 
-      await prisma.analytics.update({
-        where: { projectId: project.id },
-        data: {
-          totalPageVisits: { increment: event === "pageview" ? 1 : 0 },
-          totalVisits: { set: totalVisits },
-          bounceRate: { set: bounceRate },
-          avgDuration: { set: avgDuration }
-        },
-      });
+      if (event === "pageview") {
+        await query(
+          `UPDATE "Analytics"
+           SET "totalPageVisits" = "totalPageVisits" + 1,
+               "totalVisits" = $2,
+               "bounceRate" = $3,
+               "avgDuration" = $4
+           WHERE "projectId" = $1`,
+          [project.id, totalVisits, bounceRate, avgDuration]
+        );
+      } else {
+        await query(
+          `UPDATE "Analytics"
+           SET "totalVisits" = $2,
+               "bounceRate" = $3,
+               "avgDuration" = $4
+           WHERE "projectId" = $1`,
+          [project.id, totalVisits, bounceRate, avgDuration]
+        );
+      }
     }
 
     return NextResponse.json({ ok: true });

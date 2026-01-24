@@ -1,5 +1,5 @@
 import Link from "next/link";
-import prisma from "@/lib/prisma";
+import { query, queryOne } from "@/lib/db";
 import { auth } from "../../../../auth";
 import { redirect } from "next/navigation";
 import Block from "@/components/blocks";
@@ -7,6 +7,9 @@ import { EyeIcon } from "@/components/icons/eye";
 import { CreateProjectSheet } from "@/components/analytics/create-project-sheet";
 import { LayoutGrid, ExternalLink, Trash2, CheckCircle2 } from "lucide-react";
 import { deleteProject } from "@/lib/actions";
+import type { User, Project, Analytics } from "@/types/models";
+
+type ProjectWithAnalytics = Project & { analytics: Analytics | null };
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -17,34 +20,37 @@ export default async function DashboardPage() {
 
   const email = session.user.email as string;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      projects: {
-        include: { analytics: true },
-        orderBy: { id: "desc" },
-      },
-    },
-  });
+  const user = await queryOne<User>(
+    `SELECT * FROM "User" WHERE "email" = $1`,
+    [email]
+  );
+
+  // Get projects with analytics
+  const projects: ProjectWithAnalytics[] = user
+    ? await query<ProjectWithAnalytics>(
+        `SELECT 
+           p.*,
+           json_build_object(
+             'id', a."id",
+             'projectId', a."projectId",
+             'totalPageVisits', COALESCE(a."totalPageVisits", 0),
+             'totalVisits', COALESCE(a."totalVisits", 0),
+             'avgDuration', COALESCE(a."avgDuration", 0),
+             'bounceRate', COALESCE(a."bounceRate", 0)
+           ) as analytics
+         FROM "Project" p
+         LEFT JOIN "Analytics" a ON a."projectId" = p."id"
+         WHERE p."ownerId" = $1
+         ORDER BY p."id" DESC`,
+        [user.id]
+      )
+    : [];
 
   // Calculate totals across ALL projects for the summary
-  const totalVisits = user?.projects.reduce(
-    (sum, p) => sum + (p.analytics?.totalVisits ?? 0),
-    0
-  ) ?? 0;
-  const totalPageviews = user?.projects.reduce(
+  const totalPageviews = projects.reduce(
     (sum, p) => sum + (p.analytics?.totalPageVisits ?? 0),
     0
-  ) ?? 0;
-
-  // Use the weighted average for bounce rate and duration across projects
-  const avgBounceRate = user && user.projects.length > 0
-    ? user.projects.reduce((sum, p) => sum + (p.analytics?.bounceRate ?? 0), 0) / user.projects.length
-    : 0;
-
-  const avgDurationSeconds = user && user.projects.length > 0
-    ? user.projects.reduce((sum, p) => sum + (p.analytics?.avgDuration ?? 0), 0) / user.projects.length
-    : 0;
+  );
 
   return (
     <div className="min-h-screen bg-zinc-50 py-8">
@@ -84,7 +90,7 @@ export default async function DashboardPage() {
             </h2>
           </div>
 
-          {!user || user.projects.length === 0 ? (
+          {!user || projects.length === 0 ? (
             <div className="bg-white border border-stone-200 rounded-[8px] p-12 text-center shadow-sm">
               <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <LayoutGrid className="w-6 h-6 text-zinc-400" />
@@ -106,7 +112,7 @@ export default async function DashboardPage() {
                 <span className="text-right px-2">Action</span>
               </div>
               <div className="flex flex-col">
-                {user.projects.map((project) => (
+                {projects.map((project) => (
                   <div
                     key={project.id}
                     className="grid grid-cols-[1.5fr_1fr_1fr_80px] items-center px-6 py-4 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-all group relative"

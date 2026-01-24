@@ -1,5 +1,5 @@
 import Link from "next/link";
-import prisma from "@/lib/prisma";
+import { query, queryOne } from "@/lib/db";
 import { auth, signOut } from "../../../../../auth";
 import { notFound, redirect } from "next/navigation";
 import { DefaultBarChart } from "@/components/ui/default-bar-chart";
@@ -11,6 +11,7 @@ import { ActivityIcon } from "@/components/icons/chart_line";
 import { GradientBarMultipleChart } from "@/components/ui/gradient-bar-multiple-chart";
 import TrackingScript from "@/components/analytics/tracking-script";
 import { Slash, Globe } from "lucide-react";
+import type { User, Project, Analytics } from "@/types/models";
 
 type PageParams = Promise<{ slug: string }>;
 
@@ -35,53 +36,56 @@ export default async function ProjectAnalyticsPage({
 
   const email = session.user.email as string;
 
-  // Get user and verify they own the project
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+  // Get user
+  const user = await queryOne<User>(
+    `SELECT * FROM "User" WHERE "email" = $1`,
+    [email]
+  );
 
   if (!user) {
     redirect("/");
   }
 
-  const project = await prisma.project.findUnique({
-    where: { publicId: projectPublicId },
-    include: {
-      analytics: true,
-      sessions: {
-        orderBy: { createdAt: "desc" },
-        take: 90,
-      },
-    },
-  });
+  // Get project with analytics
+  const project = await queryOne<Project>(
+    `SELECT * FROM "Project" WHERE "publicId" = $1`,
+    [projectPublicId]
+  );
 
   if (!project || project.ownerId !== user.id) {
     notFound();
   }
 
-  if (!project.analytics) {
+  const analytics = await queryOne<Analytics>(
+    `SELECT * FROM "Analytics" WHERE "projectId" = $1`,
+    [project.id]
+  );
+
+  if (!analytics) {
     notFound();
   }
 
   // Fetch daily visitors (sessions) for the last 30 days
-  const visitorsByDayRaw = await prisma.session.groupBy({
-    by: ['createdAt'],
-    where: {
-      projectId: project.id,
-      createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-    },
-    _count: { id: true }
-  });
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  
+  const visitorsByDayRaw = await query<{ date: Date; count: number }>(
+    `SELECT date_trunc('day', "createdAt") as "date", COUNT(*)::int as "count"
+     FROM "Session"
+     WHERE "projectId" = $1 AND "createdAt" >= $2
+     GROUP BY 1
+     ORDER BY 1`,
+    [project.id, thirtyDaysAgo]
+  );
 
   // Fetch daily views (pageviews) for the last 30 days
-  const viewsByDayRaw = await prisma.pageView.groupBy({
-    by: ['timestamp'],
-    where: {
-      projectId: project.id,
-      timestamp: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-    },
-    _count: { id: true }
-  });
+  const viewsByDayRaw = await query<{ date: Date; count: number }>(
+    `SELECT date_trunc('day', "timestamp") as "date", COUNT(*)::int as "count"
+     FROM "PageView"
+     WHERE "projectId" = $1 AND "timestamp" >= $2
+     GROUP BY 1
+     ORDER BY 1`,
+    [project.id, thirtyDaysAgo]
+  );
 
   // Helper to normalize dates to YYYY-MM-DD
   const normalizeDate = (d: Date) => d.toISOString().split('T')[0];
@@ -96,20 +100,20 @@ export default async function ProjectAnalyticsPage({
   }
 
   visitorsByDayRaw.forEach(item => {
-    const date = normalizeDate(item.createdAt);
+    const date = normalizeDate(item.date);
     if (dailyStats.has(date)) {
-      dailyStats.get(date)!.visitors += item._count.id;
+      dailyStats.get(date)!.visitors += item.count;
     } else {
-      dailyStats.set(date, { visitors: item._count.id, views: 0 });
+      dailyStats.set(date, { visitors: item.count, views: 0 });
     }
   });
 
   viewsByDayRaw.forEach(item => {
-    const date = normalizeDate(item.timestamp);
+    const date = normalizeDate(item.date);
     if (dailyStats.has(date)) {
-      dailyStats.get(date)!.views += item._count.id;
+      dailyStats.get(date)!.views += item.count;
     } else {
-      dailyStats.set(date, { visitors: 0, views: item._count.id });
+      dailyStats.set(date, { visitors: 0, views: item.count });
     }
   });
 
@@ -122,22 +126,26 @@ export default async function ProjectAnalyticsPage({
     .slice(-7); // Just show last 7 days for better visibility
 
   // Fetch top pages
-  const topPages = await prisma.pageView.groupBy({
-    by: ["path"],
-    where: { projectId: project.id },
-    _count: { path: true },
-    orderBy: { _count: { path: "desc" } },
-    take: 5,
-  });
+  const topPages = await query<{ path: string; count: number }>(
+    `SELECT "path", COUNT(*)::int as "count"
+     FROM "PageView"
+     WHERE "projectId" = $1
+     GROUP BY "path"
+     ORDER BY "count" DESC
+     LIMIT 5`,
+    [project.id]
+  );
 
   // Fetch top browsers
-  const topBrowsers = await prisma.pageView.groupBy({
-    by: ['browser'],
-    where: { projectId: project.id },
-    _count: { browser: true },
-    orderBy: { _count: { browser: 'desc' } },
-    take: 5
-  });
+  const topBrowsers = await query<{ browser: string | null; count: number }>(
+    `SELECT "browser", COUNT(*)::int as "count"
+     FROM "PageView"
+     WHERE "projectId" = $1
+     GROUP BY "browser"
+     ORDER BY "count" DESC
+     LIMIT 5`,
+    [project.id]
+  );
 
   // Generate tracking script snippet
   const trackingEndpoint =
@@ -168,26 +176,26 @@ export default async function ProjectAnalyticsPage({
 
           <Block
             title="Total visits"
-            value={project.analytics.totalVisits}
+            value={analytics.totalVisits}
             icon={<GaugeIcon className="text-muted-foreground" />}
 
           />
 
           <Block
             title="Pageviews"
-            value={project.analytics.totalPageVisits}
+            value={analytics.totalPageVisits}
             icon={<EyeIcon className="text-muted-foreground" />}
           />
 
           <Block
             title="Bounce rate"
-            value={project.analytics.bounceRate}
+            value={analytics.bounceRate}
             icon={<ChartSplineIcon className="text-muted-foreground" />}
           />
 
           <Block
             title="Avg duration"
-            value={project.analytics.avgDuration}
+            value={analytics.avgDuration}
             icon={<ActivityIcon className="text-muted-foreground" />}
           />
         </section>
@@ -231,7 +239,7 @@ export default async function ProjectAnalyticsPage({
                       {page.path}
                     </span>
                     <span className="text-foreground font-mono font-medium">
-                      {page._count.path}
+                      {page.count}
                     </span>
                   </div>
                 ))}
@@ -285,7 +293,7 @@ export default async function ProjectAnalyticsPage({
                       {b.browser || 'Unknown'}
                     </span>
                     <span className="text-foreground font-mono font-medium">
-                      {b._count.browser}
+                      {b.count}
                     </span>
                   </div>
                 ))}
