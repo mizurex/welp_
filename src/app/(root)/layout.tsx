@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, DM_Sans } from "next/font/google";
+import Script from "next/script";
 import "@/app/globals.css";
 
 const dmSans = DM_Sans({
@@ -29,10 +30,11 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <script
-          src="http://localhost:3000/tracker.js"
-          data-project-id="prj_5eklxgbgn1hmjg80ueq"
-        ></script>
+        <Script 
+          src="/tracker.js" 
+          data-project-id="prj_1vn2e3bn7ajmkwpjvvu"
+          strategy="afterInteractive"
+        />
 
         {children}
       </body>

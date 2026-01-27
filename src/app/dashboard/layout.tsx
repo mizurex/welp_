@@ -25,6 +25,11 @@ export default async function DashboardLayout({
   );
   const user = users[0];
 
+  const details = {
+    name: user?.name,
+    email: user?.email,
+  }
+
   const projects = user
     ? await query<Project>(
         `SELECT * FROM "Project" WHERE "ownerId" = $1 ORDER BY "id" DESC`,
@@ -35,8 +40,8 @@ export default async function DashboardLayout({
   return (
     <MobileProvider>
       <div className="min-h-screen bg-bg-primary">
-        <Sidebar projects={projects.map((project) => ({ name: project.name, publicId: project.publicId }))} />
-        <div className="md:ml-57">
+        <Sidebar projects={projects.map((project) => ({ name: project.name, publicId: project.publicId }))} user={details} />
+        <div className="md:ml-57 pt-14 md:pt-0">
           <main className="min-h-screen">{children}</main>
         </div>
       </div>

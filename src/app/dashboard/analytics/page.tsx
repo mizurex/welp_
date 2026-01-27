@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import Block from "@/components/blocks";
 import { EyeIcon } from "@/components/icons/eye";
 import { CreateProjectSheet } from "@/components/analytics/create-project-sheet";
-import { LayoutGrid, ExternalLink, Trash2, CheckCircle2 } from "lucide-react";
+import { LayoutGrid, ExternalLink, Trash2 } from "lucide-react";
 import { deleteProject } from "@/lib/actions";
 import type { User, Project, Analytics } from "@/types/models";
 
@@ -26,25 +26,25 @@ export default async function DashboardPage() {
   );
 
   // Get projects with analytics
-  const projects: ProjectWithAnalytics[] = user
-    ? await query<ProjectWithAnalytics>(
-        `SELECT 
-           p.*,
-           json_build_object(
-             'id', a."id",
-             'projectId', a."projectId",
-             'totalPageVisits', COALESCE(a."totalPageVisits", 0),
-             'totalVisits', COALESCE(a."totalVisits", 0),
-             'avgDuration', COALESCE(a."avgDuration", 0),
-             'bounceRate', COALESCE(a."bounceRate", 0)
-           ) as analytics
-         FROM "Project" p
-         LEFT JOIN "Analytics" a ON a."projectId" = p."id"
-         WHERE p."ownerId" = $1
-         ORDER BY p."id" DESC`,
-        [user.id]
-      )
-    : [];
+  let projects: ProjectWithAnalytics[] = [];
+
+  if (user) {
+    projects = await query<ProjectWithAnalytics>(
+      `SELECT 
+         p.*,
+         json_build_object(
+           'id', a."id",
+           'projectId', a."projectId",
+           'totalPageVisits', COALESCE(a."totalPageVisits", 0),
+           'totalVisits', COALESCE(a."totalVisits", 0)
+         ) as analytics
+       FROM "Project" p
+       LEFT JOIN "Analytics" a ON a."projectId" = p."id"
+       WHERE p."ownerId" = $1
+       ORDER BY p."id" DESC`,
+      [user.id]
+    );
+  }
 
   // Calculate totals across ALL projects for the summary
   const totalPageviews = projects.reduce(
@@ -53,45 +53,39 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-50 py-8">
-      <div className="max-w-5xl mx-auto px-6 space-y-8">
+    <div className="min-h-screen bg-zinc-50 py-6 md:py-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 space-y-6 md:space-y-8">
         {/* Header Section */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">
+            <h1 className="text-xl md:text-2xl font-semibold text-zinc-900 tracking-tight">
               Overview
             </h1>
-            <p className="text-sm text-zinc-500 mt-1">Manage and monitor all your projects</p>
+            <p className="text-sm text-zinc-500 mt-1 hidden md:block">Manage and monitor all your projects</p>
           </div>
-          <div className="flex items-center gap-3">
-            <CreateProjectSheet />
-          </div>
+          <CreateProjectSheet />
         </div>
 
         {/* Stats cards */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-3 font-sans">
-
-
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 font-sans">
           <Block
             title="Combined Views"
             value={totalPageviews}
             icon={<EyeIcon className="text-muted-foreground" />}
           />
-
-
         </section>
 
         {/* Projects list */}
-        <section className="space-y-4">
+        <section className="space-y-3 md:space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wider flex items-center gap-2">
+            <h2 className="text-xs md:text-sm font-semibold text-zinc-900 uppercase tracking-wider flex items-center gap-2">
               <LayoutGrid className="w-4 h-4" />
               Your projects
             </h2>
           </div>
 
           {!user || projects.length === 0 ? (
-            <div className="bg-white border border-stone-200 rounded-[8px] p-12 text-center shadow-sm">
+            <div className="bg-white border border-stone-200 rounded-lg p-8 md:p-12 text-center shadow-sm">
               <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <LayoutGrid className="w-6 h-6 text-zinc-400" />
               </div>
@@ -99,66 +93,85 @@ export default async function DashboardPage() {
                 No projects yet
               </p>
               <p className="text-sm text-zinc-500 mt-1 mb-6">
-                Create your first project to start tracking analytics.
+                Create your first project to start tracking.
               </p>
               <CreateProjectSheet />
             </div>
           ) : (
-            <div className="flex flex-col bg-white border border-stone-200 rounded-[8px] overflow-hidden shadow-sm">
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_80px] items-center px-6 py-3 bg-stone-50 border-b border-stone-200 text-[10px] font-bold text-zinc-500 uppercase">
-                <span className="text-left">Alias</span>
-                <span className="text-left">Domain</span>
-                <span>Status</span>
-                <span className="text-right px-2">Action</span>
+            <div className="space-y-3 md:space-y-0 md:bg-white md:border md:border-stone-200 md:rounded-lg md:overflow-hidden md:shadow-sm">
+              {/* Desktop Header - Hidden on Mobile */}
+              <div className="hidden md:grid grid-cols-[2fr_2fr_60px] items-center px-4 py-3 bg-stone-50 border-b border-stone-200 text-[10px] font-bold text-zinc-500 uppercase">
+                <span>Project</span>
+                <span>Domain</span>
+                <span></span>
               </div>
-              <div className="flex flex-col">
-                {projects.map((project) => (
-                  <div
-                    key={project.id}
-                    className="grid grid-cols-[1.5fr_1fr_1fr_80px] items-center px-6 py-4 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-all group relative"
-                  >
-                    {/* Corner accents on hover (matching top pages style) */}
-                    <span className="pointer-events-none absolute left-0 top-0 h-2 w-2 border-l border-t border-transparent group-hover:border-primary/40 transition-all" />
-                    <span className="pointer-events-none absolute right-0 top-0 h-2 w-2 border-r border-t border-transparent group-hover:border-primary/40 transition-all" />
-                    <span className="pointer-events-none absolute left-0 bottom-0 h-2 w-2 border-l border-b border-transparent group-hover:border-primary/40 transition-all" />
-                    <span className="pointer-events-none absolute right-0 bottom-0 h-2 w-2 border-r border-b border-transparent group-hover:border-primary/40 transition-all" />
 
+              {/* Project Items */}
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  className="bg-white border border-stone-200 rounded-lg p-4 md:border-0 md:border-b md:border-stone-100 md:last:border-0 md:rounded-none md:px-4 md:py-3 hover:bg-stone-50/50 transition-all"
+                >
+                  {/* Mobile Layout */}
+                  <div className="md:hidden flex items-center justify-between gap-3">
                     <Link
                       href={`/dashboard/analytics/${project.publicId}`}
-                      className="flex items-center gap-2 group/link"
+                      className="flex-1 min-w-0"
                     >
-                      <span className="font-semibold text-zinc-900 group-hover/link:text-primary transition-colors truncate">
+                      <span className="font-semibold text-zinc-900 block truncate">
                         {project.name}
                       </span>
-                      <ExternalLink className="w-3 h-3 text-zinc-300 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                    </Link>
-
-                    <div className="flex items-center">
-                      <span className="text-sm text-zinc-500 font-medium truncate">
+                      <span className="text-xs text-zinc-500 truncate block mt-0.5">
                         {project.domain}
                       </span>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/dashboard/analytics/${project.publicId}`}
+                        className="p-2 text-zinc-400 hover:text-primary hover:bg-stone-100 rounded-md transition-all"
+                      >
+                        <ExternalLink size={16} />
+                      </Link>
+                      <form action={deleteProject.bind(null, project.publicId)}>
+                        <button
+                          type="submit"
+                          className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </form>
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
-                        <CheckCircle2 className="size-3 text-emerald-500" />
-                        <span className="text-[10px] font-bold text-emerald-600 uppercase whitespace-nowrap">In Sync</span>
-                      </div>
-                    </div>
+                  {/* Desktop Layout */}
+                  <div className="hidden md:grid grid-cols-[2fr_2fr_60px] items-center">
+                    <Link
+                      href={`/dashboard/analytics/${project.publicId}`}
+                      className="flex items-center gap-2 group/link min-w-0"
+                    >
+                      <span className="font-medium text-zinc-900 group-hover/link:text-primary transition-colors truncate">
+                        {project.name}
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-zinc-300 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
+                    </Link>
+
+                    <span className="text-sm text-zinc-500 truncate">
+                      {project.domain}
+                    </span>
 
                     <div className="flex justify-end">
                       <form action={deleteProject.bind(null, project.publicId)}>
                         <button
                           type="submit"
-                          className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all group/del"
+                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
                         >
-                          <Trash2 size={16} className="transition-transform group-hover/del:scale-110" />
+                          <Trash2 size={14} />
                         </button>
                       </form>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

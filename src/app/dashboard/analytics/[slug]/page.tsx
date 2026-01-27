@@ -9,7 +9,6 @@ import { EyeIcon } from "@/components/icons/eye";
 import { ChartSplineIcon } from "@/components/icons/chart.icon";
 import { ActivityIcon } from "@/components/icons/chart_line";
 import { GradientBarMultipleChart } from "@/components/ui/gradient-bar-multiple-chart";
-import TrackingScript from "@/components/analytics/tracking-script";
 import { Slash, Globe } from "lucide-react";
 import type { User, Project, Analytics } from "@/types/models";
 
@@ -34,58 +33,61 @@ export default async function ProjectAnalyticsPage({
     redirect("/");
   }
 
+
   const email = session.user.email as string;
-
-  // Get user
-  const user = await queryOne<User>(
-    `SELECT * FROM "User" WHERE "email" = $1`,
-    [email]
-  );
-
-  if (!user) {
-    redirect("/");
-  }
-
-  // Get project with analytics
-  const project = await queryOne<Project>(
-    `SELECT * FROM "Project" WHERE "publicId" = $1`,
-    [projectPublicId]
-  );
-
-  if (!project || project.ownerId !== user.id) {
-    notFound();
-  }
-
-  const analytics = await queryOne<Analytics>(
-    `SELECT * FROM "Analytics" WHERE "projectId" = $1`,
-    [project.id]
-  );
-
-  if (!analytics) {
-    notFound();
-  }
-
-  // Fetch daily visitors (sessions) for the last 30 days
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  
-  const visitorsByDayRaw = await query<{ date: Date; count: number }>(
-    `SELECT date_trunc('day', "createdAt") as "date", COUNT(*)::int as "count"
+
+  // ============================================
+  // QUERY 1: Get project + analytics + verify owner (all in one!)
+  // ============================================
+  // JOINs combine multiple tables. We get project, analytics, AND verify the user owns it.
+  const projectData = await queryOne<Project & Analytics & { analyticsId: number }>(
+    `SELECT 
+       p.*,
+       a."id" as "analyticsId",
+       a."totalPageVisits",
+       a."totalVisits", 
+       a."avgDuration",
+       a."bounceRate"
+     FROM "Project" p
+     JOIN "User" u ON p."ownerId" = u."id"
+     LEFT JOIN "Analytics" a ON a."projectId" = p."id"
+     WHERE p."publicId" = $1 AND u."email" = $2`,
+    [projectPublicId, email]
+  );
+
+  // If no result = either project doesn't exist OR user doesn't own it
+  if (!projectData || !projectData.analyticsId) {
+    notFound();
+  }
+
+  // Destructure for cleaner access
+  const project = projectData;
+  const analytics = {
+    totalPageVisits: project.totalPageVisits,
+    totalVisits: project.totalVisits,
+    avgDuration: project.avgDuration,
+    bounceRate: project.bounceRate,
+  };
+
+ 
+  const dailyStatsRaw = await query<{ date: Date; type: string; count: number }>(
+    `SELECT date_trunc('day', "createdAt") as "date", 'visitors' as "type", COUNT(*)::int as "count"
      FROM "Session"
      WHERE "projectId" = $1 AND "createdAt" >= $2
      GROUP BY 1
-     ORDER BY 1`,
-    [project.id, thirtyDaysAgo]
-  );
-
-  // Fetch daily views (pageviews) for the last 30 days
-  const viewsByDayRaw = await query<{ date: Date; count: number }>(
-    `SELECT date_trunc('day', "timestamp") as "date", COUNT(*)::int as "count"
+     UNION ALL
+     SELECT date_trunc('day', "timestamp") as "date", 'views' as "type", COUNT(*)::int as "count"
      FROM "PageView"
      WHERE "projectId" = $1 AND "timestamp" >= $2
      GROUP BY 1
      ORDER BY 1`,
     [project.id, thirtyDaysAgo]
   );
+
+  // Split the combined results
+  const visitorsByDayRaw = dailyStatsRaw.filter(r => r.type === 'visitors');
+  const viewsByDayRaw = dailyStatsRaw.filter(r => r.type === 'views');
 
   // Helper to normalize dates to YYYY-MM-DD
   const normalizeDate = (d: Date) => d.toISOString().split('T')[0];
@@ -125,27 +127,31 @@ export default async function ProjectAnalyticsPage({
     }))
     .slice(-7); // Just show last 7 days for better visibility
 
-  // Fetch top pages
-  const topPages = await query<{ path: string; count: number }>(
-    `SELECT "path", COUNT(*)::int as "count"
-     FROM "PageView"
-     WHERE "projectId" = $1
-     GROUP BY "path"
-     ORDER BY "count" DESC
-     LIMIT 5`,
-    [project.id]
-  );
-
-  // Fetch top browsers
-  const topBrowsers = await query<{ browser: string | null; count: number }>(
-    `SELECT "browser", COUNT(*)::int as "count"
-     FROM "PageView"
-     WHERE "projectId" = $1
-     GROUP BY "browser"
-     ORDER BY "count" DESC
-     LIMIT 5`,
-    [project.id]
-  );
+  // ============================================
+  // QUERY 3: Get top pages AND top browsers (one query!)
+  // ============================================
+  // We run both aggregations on the same table, so we can do them in parallel
+  // Using Promise.all to run them simultaneously (still 2 queries but parallel = faster)
+  const [topPages, topBrowsers] = await Promise.all([
+    query<{ path: string; count: number }>(
+      `SELECT "path", COUNT(*)::int as "count"
+       FROM "PageView"
+       WHERE "projectId" = $1
+       GROUP BY "path"
+       ORDER BY "count" DESC
+       LIMIT 5`,
+      [project.id]
+    ),
+    query<{ browser: string | null; count: number }>(
+      `SELECT "browser", COUNT(*)::int as "count"
+       FROM "PageView"
+       WHERE "projectId" = $1
+       GROUP BY "browser"
+       ORDER BY "count" DESC
+       LIMIT 5`,
+      [project.id]
+    ),
+  ]);
 
   // Generate tracking script snippet
   const trackingEndpoint =

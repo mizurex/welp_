@@ -33,7 +33,7 @@ export const dashboardNavigation: NavigationSection[] = [
     title: "",
     items: [
       { title: "Projects", href: "/dashboard/analytics", icon: Eye },
-      { title: "Overview", href: "/dashboard/analytics", icon: BarChart },
+      { title: "Overview", href: "/dashboard/overview", icon: BarChart },
       { title: "Settings", href: "/dashboard/settings/", icon: LayoutGrid },
     ],
   }

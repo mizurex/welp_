@@ -7,19 +7,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  User,
   Globe,
-  Link2,
-  Clock,
-  LayoutGrid,
   Moon,
   ChevronDown,
   Folder,
+  Menu,
+  X,
+  ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 
 import { createProject } from "@/lib/actions";
-import { Plus, Settings, ChevronRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -29,15 +28,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useParams, useRouter } from "next/navigation";
-import { FolderCogIcon } from "./icons/folder";
 
 interface SidebarProps {
   className?: string;
   projects?: { name: string; publicId: string }[];
+  user: { name: string; email: string };
 }
 
-export function Sidebar({ className, projects = [] }: SidebarProps) {
-  const { isMobile, isMobileMenuOpen, closeMobileMenu } = useMobile();
+export function Sidebar({ className, projects = [] , user={name: "B", email: ""}}: SidebarProps) {
+  const { isMobile, isMobileMenuOpen, closeMobileMenu, toggleMobileMenu } = useMobile();
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
@@ -53,7 +52,25 @@ export function Sidebar({ className, projects = [] }: SidebarProps) {
 
   return (
     <>
-      {/* Backdrop for mbile */}
+      {/* Mobile Header - Only shows on mobile */}
+      {isMobile && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-bg-primary border-b border-stone-200 px-4 py-1 flex items-center justify-between md:hidden">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleMobileMenu}
+              className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="size-5 text-foreground" />
+            </button>
+            <span className="font-semibold text-foreground">
+              {activeProject?.name || "Welp Analytics"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop for mobile */}
       {isMobile && isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30"
@@ -76,6 +93,20 @@ export function Sidebar({ className, projects = [] }: SidebarProps) {
 
         {/* Main Navigation Sidebar */}
         <div className="w-55 bg-bg-primary flex flex-col overflow-hidden">
+
+          {/* Mobile Close Button */}
+          {isMobile && (
+            <div className="flex items-center justify-between p-4 border-b border-stone-200">
+              <span className="font-semibold text-sm text-foreground">Menu</span>
+              <button
+                onClick={closeMobileMenu}
+                className="p-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="size-5 text-foreground" />
+              </button>
+            </div>
+          )}
 
           {/* Project Selector */}
           <div className="p-4 border-b border-stone-200 relative">
@@ -243,61 +274,30 @@ export function Sidebar({ className, projects = [] }: SidebarProps) {
               </div>
             ))}
           </nav>
-        </div>
-        <div className="w-7 bg-[#efeffa] flex flex-col items-center py-4 border-x border-stone-300">
 
-
-
-          {/* Top icons */}
-          <div className="flex flex-col items-center gap-1">
-            <IconButton icon={User} href="/dashboard/account" tooltip="Account" />
-
-            <IconButton icon={Globe} href="https://welp.dev" tooltip="Docs" external />
-            <IconButton icon={Moon} href="#" tooltip="Toggle theme" />
+          <div className="mt-auto border-t border-stone-200">
+            {/* User Profile */}
+            <div className="p-2 border-t border-stone-200">
+              <Link
+                href="/dashboard/account"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-3 px-3 py-2 hover:bg-muted rounded-[6px] transition-colors group"
+              >
+               
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+                  <p className="text-xs text-foreground/50 truncate">Manage settings</p>
+                </div>
+                <ChevronRight className="size-4 text-foreground/30 group-hover:text-foreground/50 transition-colors" />
+              </Link>
+            </div>
           </div>
-
-          {/* Bottom icons */}
-          <div className="mt-auto flex flex-col items-center gap-1">
-
-          </div>
         </div>
+
+        {/* Thin accent bar */}
+        <div className="w-1.5 bg-gradient-to-b from-stone-200 via-stone-100 to-stone-200" />
       </div>
     </>
   );
 }
 
-// Icon button for the rail
-function IconButton({
-  icon: Icon,
-  href,
-  tooltip,
-  active,
-  external,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-  tooltip: string;
-  active?: boolean;
-  external?: boolean;
-}) {
-  const Component = external ? "a" : Link;
-  const extraProps = external ? { target: "_blank", rel: "noopener noreferrer" } : {};
-
-  return (
-    <motion.a
-      href={href}
-      title={tooltip}
-      className={cn(
-        "size-6 space-y-[4px] rounded-[8px] flex items-center justify-center transition-colors",
-        active
-          ? "bg-primary text-white"
-          : "p-1  rounded-[4.5px] hover:bg-white "
-      )}
-
-      whileTap={{ scale: 0.9 }}
-      {...extraProps}
-    >
-      <Icon className="size-3" />
-    </motion.a>
-  );
-}

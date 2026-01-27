@@ -1,7 +1,6 @@
 import { Pool, types } from "pg";
 
-// Parse timestamps as JS Date objects (Postgres returns strings by default)
-types.setTypeParser(types.builtins.TIMESTAMP, (val) => new Date(val + "Z"));
+types.setTypeParser(types.builtins.TIMESTAMP, (val) => new Date(val));
 types.setTypeParser(types.builtins.TIMESTAMPTZ, (val) => new Date(val));
 
 const globalForDb = globalThis as unknown as { __pool?: Pool };

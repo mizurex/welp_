@@ -3,165 +3,151 @@ import { query, queryOne } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import { updateProject, updateProjectDomain, deleteProject } from "@/lib/actions";
 import TrackingScript from "@/components/analytics/tracking-script";
-import { Settings, Trash2, Globe, LayoutGrid, Fingerprint, ChevronRight, Save, Wand2, AlertTriangle } from "lucide-react";
-import { MobileMenuButton } from "@/components/mobile-menu-button";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { Copy, ExternalLink } from "lucide-react";
 import type { User, Project } from "@/types/models";
+import Link from "next/link";
 
 interface PageProps {
-    params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
-export default async function ProjectSettingsPage({
-    params,
-}: PageProps) {
-    const { slug } = await params;
-    const projectPublicId = slug;
+export default async function ProjectSettingsPage({ params }: PageProps) {
+  const { slug } = await params;
+  const projectPublicId = slug;
 
-    const session = await auth();
+  const session = await auth();
 
-    if (!session || !session.user || !session.user.email) {
-        redirect("/");
-    }
+  if (!session || !session.user || !session.user.email) {
+    redirect("/");
+  }
 
-    const email = session.user.email as string;
+  const email = session.user.email as string;
 
-    const user = await queryOne<User>(
-        `SELECT * FROM "User" WHERE "email" = $1`,
-        [email]
-    );
+  // Optimized: Single query with JOIN
+  const project = await queryOne<Project & { userEmail: string }>(
+    `SELECT p.*, u."email" as "userEmail"
+     FROM "Project" p
+     JOIN "User" u ON p."ownerId" = u."id"
+     WHERE p."publicId" = $1 AND u."email" = $2`,
+    [projectPublicId, email]
+  );
 
-    if (!user) {
-        redirect("/");
-    }
+  if (!project) {
+    notFound();
+  }
 
-    const project = await queryOne<Project>(
-        `SELECT * FROM "Project" WHERE "publicId" = $1`,
-        [projectPublicId]
-    );
+  const trackingEndpoint = process.env.NEXT_PUBLIC_URL || "https://welp.dev";
 
-    if (!project || project.ownerId !== user.id) {
-        notFound();
-    }
-
-    const trackingEndpoint = process.env.NEXT_PUBLIC_URL || "https://welp.dev";
-
-    return (
-        <div className="min-h-screen bg-zinc-50 font-sans pb-20">
-            <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-
-                {/* Header Section */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <MobileMenuButton />
-                        <div>
-                            <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Project Settings</h1>
-                            <p className="text-sm text-stone-500 mt-0.5">Configure your tracking preferences </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-
-                    {/* General Configuration Block */}
-                    <div className="rounded-[6px] bg-bg-primary flex flex-col text-foreground border border-stone-300">
-                        <div className="flex items-center rounded-[6px] rounded-b-none justify-between pl-[10px] pr-[3px] bg-muted border-b border-stone-200 gap-[4px] py-[4px]">
-                            <p className="text-sm font-semibold text-foreground/80">
-                                General Configuration
-                            </p>
-                            <div className="p-1 bg-white shadow-md rounded-[4.5px]">
-                                <Settings className="size-3.5 text-stone-600" />
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-6">
-                            {/* Project Name Form */}
-                            <form action={updateProject.bind(null, project.publicId)} className="relative group">
-                                {/* Corner accents */}
-                                <span className="pointer-events-none absolute left-0 top-0 h-2 w-2 border-l border-t border-stone-200 group-hover:border-primary transition-all" />
-                                <span className="pointer-events-none absolute right-0 top-0 h-2 w-2 border-r border-t border-stone-200 group-hover:border-primary transition-all" />
-
-                                <div className="p-3 border border-stone-200 rounded-lg group-hover:border-stone-300 transition-colors">
-                                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block">Project Name</label>
-                                    <div className="flex items-center gap-2">
-                                        <LayoutGrid className="size-4 text-stone-400" />
-                                        <input
-                                            name="name"
-                                            defaultValue={project.name}
-                                            className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-medium outline-none"
-                                        />
-                                        <button type="submit" className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">Save</button>
-                                    </div>
-                                </div>
-                            </form>
-
-                            {/* Domain Form */}
-                            <form action={updateProjectDomain.bind(null, project.publicId)} className="relative group">
-                                <span className="pointer-events-none absolute left-0 top-0 h-2 w-2 border-l border-t border-stone-200 group-hover:border-primary transition-all" />
-                                <span className="pointer-events-none absolute right-0 top-0 h-2 w-2 border-r border-t border-stone-200 group-hover:border-primary transition-all" />
-
-                                <div className="p-3 border border-stone-200 rounded-lg group-hover:border-stone-300 transition-colors">
-                                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block">Domain</label>
-                                    <div className="flex items-center gap-2">
-                                        <Globe className="size-4 text-stone-400" />
-                                        <input
-                                            name="domain"
-                                            defaultValue={project.domain}
-                                            className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-medium outline-none"
-                                        />
-                                        <button type="submit" className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">Save</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    {/* API Credentials Block */}
-                    <div className="rounded-[6px] bg-bg-primary flex flex-col text-foreground border border-stone-300">
-                        <div className="flex items-center rounded-[6px] rounded-b-none justify-between pl-[10px] pr-[3px] bg-muted border-b border-stone-200 gap-[4px] py-[4px]">
-                            <p className="text-sm font-semibold text-foreground/80">
-                                API Credentials
-                            </p>
-                            <div className="p-1 bg-white shadow-md rounded-[4.5px]">
-                                <Fingerprint className="size-3.5 text-stone-600" />
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block pl-1">Project Identifier</label>
-                                <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 group relative overflow-hidden">
-                                    <span className="pointer-events-none absolute left-0 top-0 h-full w-0.5 bg-primary/20" />
-                                    <code className="text-xs font-mono text-stone-600 select-all block break-all">{project.publicId}</code>
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-stone-400 italic">This ID is required to initialize the tracker. Keep it secure.</p>
-                        </div>
-                    </div>
-
-                    {/* Tracking Integration (Wide) */}
-                    <div className="md:col-span-2">
-                        <TrackingScript projectPublicId={project.publicId} baseUrl={trackingEndpoint} />
-                    </div>
-
-                    {/* Danger Zone Block (Wide) */}
-                    <div className="flex">
-                    <form action={deleteProject.bind(null, project.publicId)}>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 bg-red-600 text-white text-[11px] font-bold uppercase tracking-widest rounded-md hover:bg-red-700 transition-all shadow-sm active:scale-95"
-                                >
-                                    Delete Permanently
-                                </button>
-                            </form>
-
-                        
-                    </div>
-
-                </div>
-
-            </main>
+  return (
+    <div className="min-h-screen bg-zinc-50 font-sans">
+      <main className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
+        
+        {/* Header */}
+        <div className="mb-6 md:mb-10">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-2 overflow-x-auto">
+            <Link href="/dashboard/analytics" className="hover:text-foreground transition-colors whitespace-nowrap">
+              Projects
+            </Link>
+            <span>/</span>
+            <Link href={`/dashboard/analytics/${project.publicId}`} className="hover:text-foreground transition-colors truncate max-w-[100px] md:max-w-none">
+              {project.name}
+            </Link>
+            <span>/</span>
+            <span className="text-foreground whitespace-nowrap">Settings</span>
+          </div>
+          <h1 className="text-xl md:text-2xl font-semibold text-foreground">Settings</h1>
         </div>
-    );
+
+        <div className="space-y-6">
+          
+          {/* General Settings Card */}
+          <section className="bg-white border border-stone-200 rounded-lg overflow-hidden">
+            <div className="px-4 md:px-6 py-3 border-b border-stone-100">
+              <h2 className="text-sm font-semibold text-foreground">General</h2>
+            </div>
+            
+            <div className="divide-y divide-stone-100">
+              {/* Project Name */}
+              <form action={updateProject.bind(null, project.publicId)} className="px-4 md:px-6 py-4">
+                <label htmlFor="name" className="text-sm font-medium text-foreground block mb-2">
+                  Project Name
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="name"
+                    name="name"
+                    defaultValue={project.name}
+                    className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                  <button 
+                    type="submit" 
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+
+              {/* Domain */}
+              <form action={updateProjectDomain.bind(null, project.publicId)} className="px-4 md:px-6 py-4">
+                <label htmlFor="domain" className="text-sm font-medium text-foreground block mb-2">
+                  Domain
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="domain"
+                    name="domain"
+                    defaultValue={project.domain}
+                    className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                  <button 
+                    type="submit" 
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+
+              {/* Project ID (Read Only) */}
+              <div className="px-4 md:px-6 py-4">
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Project ID
+                </label>
+                <code className="block w-full px-3 py-2 text-sm font-mono bg-stone-50 border border-stone-200 rounded-md text-muted-foreground select-all overflow-x-auto">
+                  {project.publicId}
+                </code>
+              </div>
+            </div>
+          </section>
+
+          {/* Tracking Script Card */}
+          <section>
+            <TrackingScript projectPublicId={project.publicId} baseUrl={trackingEndpoint} />
+          </section>
+
+          {/* Danger Zone Card */}
+          <section className="bg-white border border-red-200 rounded-lg overflow-hidden">
+            <div className="px-4 md:px-6 py-4">
+              <p className="text-sm font-medium text-foreground mb-1">
+                Delete project
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                This cannot be undone.
+              </p>
+              <form action={deleteProject.bind(null, project.publicId)}>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </form>
+            </div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+  );
 }

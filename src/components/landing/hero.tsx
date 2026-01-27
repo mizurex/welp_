@@ -20,13 +20,13 @@ export default function Hero() {
       </Link>
         </span>
       
-      {/* <span>
+       <span>
         <Link 
         href="/api/auth/signin"
         className="inline-flex items-center justify-center bg-primary text-white text-sm font-sans px-4 py-2 rounded-[6px] hover:opacity-90 transition-opacity">
           Sign up
         </Link>
-      </span> */}
+      </span> 
 
       </div>
 

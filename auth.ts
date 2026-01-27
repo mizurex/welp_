@@ -1,12 +1,11 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { nanoid } from "nanoid";
 import { query, queryOne } from "@/lib/db";
 import type { User } from "@/types/models";
 
 function generatePublicId(prefix: string): string {
-  const randomPart = Math.random().toString(36).slice(2);
-  const timePart = Date.now().toString(36);
-  return prefix + "_" + randomPart + timePart;
+  return `${prefix}_${nanoid(16)}`;
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -25,7 +24,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
     async jwt({ token, account, profile }) {
       if (account?.provider === "google") {
-        const googleId = account.providerAccountId;
         const email =
           (token.email as string | undefined) ||
           (profile?.email as string | undefined) ||
@@ -34,8 +32,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           (token.name as string | undefined) ||
           (profile?.name as string | undefined) ||
           undefined;
-
-        token.googleId = googleId;
 
         if (email) {
           const existing = await queryOne<User>(
@@ -48,19 +44,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!existing) {
             const publicId = generatePublicId("usr");
             userRecord = (await queryOne<User>(
-              `INSERT INTO "User" ("email", "name", "publicId", "googleId")
-               VALUES ($1, $2, $3, $4)
+              `INSERT INTO "User" ("email", "name", "publicId")
+               VALUES ($1, $2, $3)
                RETURNING *`,
-              [email, name || "", publicId, googleId]
+              [email, name || "", publicId]
             ))!;
           } else {
             userRecord = (await queryOne<User>(
               `UPDATE "User"
                SET "name" = COALESCE($2, "name"),
-                   "googleId" = COALESCE($3, "googleId")
                WHERE "id" = $1
                RETURNING *`,
-              [existing.id, name || existing.name, existing.googleId || googleId]
+              [existing.id, name || existing.name]
             ))!;
           }
 
@@ -72,20 +67,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
 
-    async session({ session, token }) {
-      if ((token as any).googleId) {
-        (session.user as any).googleId = (token as any).googleId;
-      }
-
-      if ((token as any).appUserId) {
-        (session.user as any).appUserId = (token as any).appUserId;
-      }
-
-      if ((token as any).appUserDbId) {
-        (session.user as any).appUserDbId = (token as any).appUserDbId;
-      }
-
-      return session;
-    },
+    
   },
 });

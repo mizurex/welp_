@@ -3,7 +3,6 @@ export type User = {
   email: string;
   name: string;
   publicId: string;
-  googleId: string | null;
 };
 
 export type Project = {

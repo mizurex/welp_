@@ -49,9 +49,7 @@ export default function RootLayout({ children }) {
         <section className="bg-white border border-stone-200 rounded-[6px] overflow-hidden shadow-sm font-sans">
             <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-white">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-white border border-stone-200 rounded-md shadow-sm">
-                        <Terminal className="w-4 h-4 text-stone-600" />
-                    </div>
+                 
                     <div>
                         <h2 className="text-sm font-semibold text-stone-900">Tracking Installation</h2>
                         <p className="text-xs text-stone-500">Add the snippet below to start collecting data</p>
@@ -63,7 +61,7 @@ export default function RootLayout({ children }) {
                     className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-md hover:opacity-90 transition-all shadow-sm active:scale-95"
                 >
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? "Copied!" : "Copy Code"}
+                   
                 </button>
             </div>
 
