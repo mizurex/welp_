@@ -55,7 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           } else {
             userRecord = (await queryOne<User>(
               `UPDATE "User"
-               SET "name" = COALESCE($2, "name"),
+               SET "name" = COALESCE($2, "name")
                WHERE "id" = $1
                RETURNING *`,
               [existing.id, name || existing.name]
