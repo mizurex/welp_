@@ -36,7 +36,7 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
     notFound();
   }
 
-  const trackingEndpoint = process.env.NEXT_PUBLIC_URL || "https://welp.dev";
+  const trackingEndpoint = process.env.NEXT_PUBLIC_APP_URL || "https://www.trywelp.live";
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans">

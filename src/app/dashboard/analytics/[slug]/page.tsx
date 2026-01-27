@@ -153,10 +153,6 @@ export default async function ProjectAnalyticsPage({
     ),
   ]);
 
-  // Generate tracking script snippet
-  const trackingEndpoint =
-    process.env.NEXT_PUBLIC_URL || "https://your-domain.com";
-  const scriptSnippet = `<script src="${trackingEndpoint}/tracker.js" data-project-id="${project.publicId}"></script>`;
 
   return (
     <div className="min-h-screen bg-zinc-50">

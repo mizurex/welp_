@@ -3,7 +3,11 @@
 
   /* ------------------ CONFIG ------------------ */
 
-  const ENDPOINT = "http://localhost:3000/api/track";
+  // Auto-detect endpoint
+  const scriptSrc = document.currentScript && document.currentScript.src;
+  const ENDPOINT = scriptSrc 
+    ? new URL(scriptSrc).origin + "/api/track"
+    : "https://www.trywelp.live/api/track";
   const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 min
 
   const doc = document;
