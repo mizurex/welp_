@@ -12,6 +12,27 @@ function generateProjectId(): string {
     return "prj_" + randomPart + timePart;
 }
 
+// Check if domain already exists in ANY project (globally unique)
+export async function checkDomainExists(domain: string): Promise<{ exists: boolean }> {
+    // Clean the domain
+    const cleanedDomain = domain.trim().replace(/^(https?:\/\/)?(www\.)?/, "").toLowerCase();
+
+    if (!cleanedDomain) {
+        return { exists: false };
+    }
+
+    const existing = await queryOne<{ id: number }>(
+        `SELECT "id" FROM "Project" WHERE "domain" = $1 LIMIT 1`,
+        [cleanedDomain]
+    );
+     
+    if (existing) {
+        return { exists: true };
+    }
+
+    return { exists: false };
+}
+
 export async function createProject(formData: FormData) {
     console.log("Creating project...");
     const session = await auth();

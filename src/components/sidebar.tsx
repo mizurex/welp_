@@ -279,7 +279,7 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
             {/* User Profile */}
             <div className="p-2 border-t border-stone-200">
               <Link
-                href="/dashboard/account"
+                href="/#"
                 onClick={closeMobileMenu}
                 className="flex items-center gap-3 px-3 py-2 hover:bg-muted rounded-[6px] transition-colors group"
               >
