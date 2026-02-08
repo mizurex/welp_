@@ -3,7 +3,7 @@ import { query, queryOne } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import { updateProject, updateProjectDomain, deleteProject } from "@/lib/actions";
 import TrackingScript from "@/components/analytics/tracking-script";
-import { Copy, ExternalLink } from "lucide-react";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import type { User, Project } from "@/types/models";
 import Link from "next/link";
 
@@ -15,6 +15,10 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
   const { slug } = await params;
   const projectPublicId = slug;
 
+  if (!projectPublicId?.trim()) {
+    redirect("/dashboard/analytics");
+  }
+
   const session = await auth();
 
   if (!session || !session.user || !session.user.email) {
@@ -23,7 +27,6 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
 
   const email = session.user.email as string;
 
-  // Optimized: Single query with JOIN
   const project = await queryOne<Project & { userEmail: string }>(
     `SELECT p.*, u."email" as "userEmail"
      FROM "Project" p
@@ -61,7 +64,7 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
         <div className="space-y-6">
           
           {/* General Settings Card */}
-          <section className="bg-white border border-stone-200 rounded-lg overflow-hidden">
+          <section className="bg-white border border-stone-200 rounded-[6px] overflow-hidden">
             <div className="px-4 md:px-6 py-3 border-b border-stone-100">
               <h2 className="text-sm font-semibold text-foreground">General</h2>
             </div>
@@ -79,12 +82,7 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
                     defaultValue={project.name}
                     className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
-                  <button 
-                    type="submit" 
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
-                  >
-                    Save
-                  </button>
+                  <FormSubmitButton>Save</FormSubmitButton>
                 </div>
               </form>
 
@@ -94,23 +92,14 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
                   Domain
                 </label>
                 <div className="flex items-center gap-2">
-                  <input
-                    id="domain"
-                    name="domain"
-                    defaultValue={project.domain}
-                    className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  />
-                  <button 
-                    type="submit" 
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
-                  >
-                    Save
-                  </button>
+                <code className="block w-full px-3 py-2 text-sm font-mono bg-stone-50 border border-stone-200 rounded-md text-muted-foreground select-all overflow-x-auto">
+                  {project.domain}
+                </code>
+               
                 </div>
               </form>
 
-              {/* Project ID (Read Only) */}
-              <div className="px-4 md:px-6 py-4">
+                <div className="px-4 md:px-6 py-4">
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Project ID
                 </label>
@@ -120,14 +109,11 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
               </div>
             </div>
           </section>
-
-          {/* Tracking Script Card */}
           <section>
             <TrackingScript projectPublicId={project.publicId} baseUrl={trackingEndpoint} />
           </section>
 
-          {/* Danger Zone Card */}
-          <section className="bg-white border border-red-200 rounded-lg overflow-hidden">
+            <section className="bg-white  rounded-[6px] overflow-hidden">
             <div className="px-4 md:px-6 py-4">
               <p className="text-sm font-medium text-foreground mb-1">
                 Delete project
@@ -138,9 +124,9 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
               <form action={deleteProject.bind(null, project.publicId)}>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-400 rounded-md hover:bg-red-700 transition-colors"
                 >
-                  Delete
+                  <FormSubmitButton loadingText="Deleting...">Delete</FormSubmitButton>
                 </button>
               </form>
             </div>

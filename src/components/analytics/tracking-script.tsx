@@ -46,7 +46,7 @@ export default function RootLayout({ children }) {
     };
 
     return (
-        <section className="bg-white border border-stone-200 rounded-[6px] overflow-hidden shadow-sm font-sans">
+        <section className="bg-white border border-stone-200 rounded-[6px] overflow-hidden  font-sans">
             <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-white">
                 <div className="flex items-center gap-2">
                  
@@ -58,7 +58,7 @@ export default function RootLayout({ children }) {
 
                 <button
                     onClick={copyToClipboard}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-md hover:opacity-90 transition-all shadow-sm active:scale-95"
+                    className="flex items-center cursor-pointer gap-2 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-md hover:opacity-90 transition-all shadow-sm active:scale-95"
                 >
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                    
@@ -66,7 +66,6 @@ export default function RootLayout({ children }) {
             </div>
 
             <div className="p-4">
-                {/* Tabs */}
                 <div className="flex gap-1 p-1 bg-stone-100 rounded-lg w-fit mb-4">
                     <button
                         onClick={() => setActiveTab("js")}
@@ -91,14 +90,8 @@ export default function RootLayout({ children }) {
                         Next.js
                     </button>
                 </div>
-
-                {/* Code Editor Area */}
                 <div className="relative group">
-                    {/* Corner accents to match your Top Pages style */}
-                    <span className="pointer-events-none absolute left-0 top-0 h-3 w-3 border-l border-t border-stone-300 group-hover:border-primary transition-all rounded-tl-sm" />
-                    <span className="pointer-events-none absolute right-0 top-0 h-3 w-3 border-r border-t border-stone-300 group-hover:border-primary transition-all rounded-tr-sm" />
-                    <span className="pointer-events-none absolute left-0 bottom-0 h-3 w-3 border-l border-b border-stone-300 group-hover:border-primary transition-all rounded-bl-sm" />
-                    <span className="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-stone-300 group-hover:border-primary transition-all rounded-br-sm" />
+                
 
                     <div className="overflow-hidden">
                         <SyntaxHighlighter
@@ -108,12 +101,13 @@ export default function RootLayout({ children }) {
                                 margin: 0,
                                 padding: "1.25rem",
                                 fontSize: "0.875rem",
+                                fontFamily: "var(--font-jetbrains)",
                                 fontWeight: "500",
                                 lineHeight: "1.6",
                                 minHeight: "160px",
                                 borderRadius: "0.5rem",
                             }}
-                            showLineNumbers={false}
+                            showLineNumbers={true}
                         >
                             {snippets[activeTab]}
                         </SyntaxHighlighter>

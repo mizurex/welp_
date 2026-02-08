@@ -125,13 +125,7 @@ export default async function ProjectAnalyticsPage({
       visitors: stats.visitors,
       views: stats.views,
     }))
-    .slice(-7); // Just show last 7 days for better visibility
-
-  // ============================================
-  // QUERY 3: Get top pages AND top browsers (one query!)
-  // ============================================
-  // We run both aggregations on the same table, so we can do them in parallel
-  // Using Promise.all to run them simultaneously (still 2 queries but parallel = faster)
+    .slice(-7); 
   const [topPages, topBrowsers] = await Promise.all([
     query<{ path: string; count: number }>(
       `SELECT "path", COUNT(*)::int as "count"
@@ -206,10 +200,10 @@ export default async function ProjectAnalyticsPage({
 
 
         {/* Real-time breakdowns */}
-        <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,300px)_1fr] gap-3.5 font-sans">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,300px)_1fr] gap-3.5 font-sans ">
           {/* Top Pages */}
-          <div className="min-h-[420px] w-full bg-gray-100 rounded-[6px] flex flex-col border border-stone-200">
-            <div className="flex items-center justify-between py-[2px] px-[2px] border-b border-stone-200">
+          <div className="min-h-[420px] w-full rounded-[6px] bg-bg-primary flex flex-col text-foreground border border-stone-300">
+            <div className="flex items-center justify-between py-[2px] px-[2px] bg-muted border-b border-stone-200">
               <h2 className="text-sm font-semibold text-foreground/80  px-2">
                 Top Pages
               </h2>
@@ -263,8 +257,8 @@ export default async function ProjectAnalyticsPage({
 
         <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,300px)_1fr] gap-3.5 font-sans">
           {/* Top Browsers */}
-          <div className="min-h-[420px] w-full bg-gray-100 rounded-[6px] flex flex-col border border-stone-200">
-            <div className="flex items-center justify-between py-[2px] px-[2px] border-b border-stone-200">
+          <div className="min-h-[420px] w-full rounded-[6px] bg-bg-primary flex flex-col text-foreground border border-stone-300">
+            <div className="flex items-center justify-between py-[2px] px-[2px] bg-muted border-b border-stone-200">
               <h2 className="text-sm font-semibold text-foreground/80  px-2">
                 Top Browsers
               </h2>

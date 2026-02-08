@@ -246,6 +246,8 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
                 </h3>
                 <div className="space-y-0.5">
                   {section.items.map((item) => {
+                    // Hide Settings when no projects
+                    if (item.title === "Settings" && projects.length === 0) return null;
                     const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                     const Icon = item.icon;
                     return (
@@ -278,18 +280,18 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
           <div className="mt-auto border-t border-stone-200">
             {/* User Profile */}
             <div className="p-2 border-t border-stone-200">
-              <Link
-                href="/#"
+              <div
+              
                 onClick={closeMobileMenu}
                 className="flex items-center gap-3 px-3 py-2 hover:bg-muted rounded-[6px] transition-colors group"
               >
                
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
-                  <p className="text-xs text-foreground/50 truncate">Manage settings</p>
+                
                 </div>
                 <ChevronRight className="size-4 text-foreground/30 group-hover:text-foreground/50 transition-colors" />
-              </Link>
+              </div>
             </div>
           </div>
         </div>

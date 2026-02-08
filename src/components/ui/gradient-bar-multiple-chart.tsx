@@ -45,12 +45,12 @@ export function GradientBarMultipleChart({
   description = "Total visitors and views"
 }: GradientBarMultipleChartProps) {
   return (
-    <Card className="h-full py-[7px]   bg-bg-primary rounded-[6px] border border-stone-300 shadow-none font-sans">
+    <Card className="h-full py-[7px] shadow-none font-sans rounded-[6px] bg-bg-primary flex flex-col text-foreground border border-stone-300">
       <CardHeader className="">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-foreground/80 font-medium text-lg">{title}</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium text-xs">{description}</CardDescription>
+            <CardDescription className="text-stone-400 font-medium text-xs">{description}</CardDescription>
           </div>
         </div>
       </CardHeader>

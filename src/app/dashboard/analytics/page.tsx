@@ -65,8 +65,7 @@ export default async function DashboardPage() {
           </div>
           <CreateProjectSheet />
         </div>
-
-        {/* Stats cards */}
+        {projects.length > 0 && (
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 font-sans">
           <Block
             title="Combined Views"
@@ -74,7 +73,7 @@ export default async function DashboardPage() {
             icon={<EyeIcon className="text-muted-foreground" />}
           />
         </section>
-
+        )}
         {/* Projects list */}
         <section className="space-y-3 md:space-y-4">
           <div className="flex items-center justify-between">
@@ -95,7 +94,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-zinc-500 mt-1 mb-6">
                 Create your first project to start tracking.
               </p>
-              <CreateProjectSheet />
+             
             </div>
           ) : (
             <div className="space-y-3 md:space-y-0 md:bg-white md:border md:border-stone-200 md:rounded-lg md:overflow-hidden md:shadow-sm">
