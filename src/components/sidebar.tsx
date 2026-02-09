@@ -105,8 +105,6 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
                   <Folder className="size-4 text-muted-foreground" />
                 </div>
                 <div className="flex flex-col">
-               
-
                   {
                     projects.length > 0 ?(
                       <>

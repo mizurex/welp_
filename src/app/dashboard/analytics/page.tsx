@@ -5,14 +5,20 @@ import { redirect } from "next/navigation";
 import Block from "@/components/blocks";
 import { EyeIcon } from "@/components/icons/eye";
 import { CreateProjectSheet } from "@/components/analytics/create-project-sheet";
-import { LayoutGrid, ExternalLink, Trash2 } from "lucide-react";
+import { LayoutGrid, ExternalLink, Trash2, Search } from "lucide-react";
 import { deleteProject } from "@/lib/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import type { User, Project, Analytics } from "@/types/models";
 
 type ProjectWithAnalytics = Project & { analytics: Analytics | null };
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams?: Promise<{
+    q?: string;
+  }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth();
 
   if (!session || !session.user || !session.user.email) {
@@ -47,6 +53,21 @@ export default async function DashboardPage() {
     );
   }
 
+  const resolvedSearchParams = await searchParams;
+  const searchQuery =
+    typeof resolvedSearchParams?.q === "string" ? resolvedSearchParams.q.trim() : "";
+
+  const filteredProjects =
+    searchQuery.length > 0
+      ? projects.filter((p) => {
+          const q = searchQuery.toLowerCase();
+          return (
+            p.name.toLowerCase().includes(q) ||
+            p.domain.toLowerCase().includes(q)
+          );
+        })
+      : projects;
+
   // Calculate totals across ALL projects for the summary
   const totalPageviews = projects.reduce(
     (sum, p) => sum + (p.analytics?.totalPageVisits ?? 0),
@@ -77,11 +98,23 @@ export default async function DashboardPage() {
         )}
         {/* Projects list */}
         <section className="space-y-3 md:space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <h2 className="text-xs md:text-sm font-semibold text-zinc-900 uppercase tracking-wider flex items-center gap-2">
               <LayoutGrid className="w-4 h-4" />
               Your projects
             </h2>
+            {projects.length > 0 && (
+              <form method="GET" className="w-full md:w-64 relative">
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={searchQuery}
+                  placeholder="Search projects..."
+                  className="w-full pl-9 pr-3 py-2 rounded-md border border-stone-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+                <Search className="w-4 h-4 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </form>
+            )}
           </div>
 
           {!user || projects.length === 0 ? (
@@ -99,79 +132,82 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3 md:space-y-0 md:bg-white md:border md:border-stone-200 md:rounded-lg md:overflow-hidden md:shadow-sm">
-              {/* Desktop Header - Hidden on Mobile */}
               <div className="hidden md:grid grid-cols-[2fr_2fr_60px] items-center px-4 py-3 bg-stone-50 border-b border-stone-200 text-[10px] font-bold text-zinc-500 uppercase">
                 <span>Project</span>
                 <span>Domain</span>
                 <span></span>
               </div>
 
-              {/* Project Items */}
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="bg-white border border-stone-200 rounded-lg p-4 md:border-0 md:border-b md:border-stone-100 md:last:border-0 md:rounded-none md:px-4 md:py-3 hover:bg-stone-50/50 transition-all"
-                >
-                  {/* Mobile Layout */}
-                  <div className="md:hidden flex items-center justify-between gap-3">
-                    <Link
-                      href={`/dashboard/analytics/${project.publicId}`}
-                      className="flex-1 min-w-0"
-                    >
-                      <span className="font-semibold text-zinc-900 block truncate">
-                        {project.name}
-                      </span>
-                      <span className="text-xs text-zinc-500 truncate block mt-0.5">
-                        {project.domain}
-                      </span>
-                    </Link>
-                    <div className="flex items-center gap-2">
+              {filteredProjects.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-zinc-500 text-center">
+                  No projects match your search.
+                </div>
+              ) : (
+                filteredProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="bg-white border border-stone-200 rounded-lg p-4 md:border-0 md:border-b md:border-stone-100 md:last:border-0 md:rounded-none md:px-4 md:py-3 hover:bg-stone-50/50 transition-all"
+                  >
+                    <div className="md:hidden flex items-center justify-between gap-3">
                       <Link
                         href={`/dashboard/analytics/${project.publicId}`}
-                        className="p-2 text-zinc-400 hover:text-primary hover:bg-stone-100 rounded-md transition-all"
+                        className="flex-1 min-w-0"
                       >
-                        <ExternalLink size={16} />
+                        <span className="font-semibold text-zinc-900 block truncate">
+                          {project.name}
+                        </span>
+                        <span className="text-xs text-zinc-500 truncate block mt-0.5">
+                          {project.domain}
+                        </span>
                       </Link>
-                      <form action={deleteProject.bind(null, project.publicId)}>
-                        <FormSubmitButton
-                          loadingText=""
-                          className="p-2 text-zinc-400 cursor-pointer hover:text-red-500 hover:bg-red-50 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/dashboard/analytics/${project.publicId}`}
+                          className="p-2 text-zinc-400 hover:text-primary hover:bg-stone-100 rounded-md transition-all"
                         >
-                          <Trash2 size={16} />
-                        </FormSubmitButton>
-                      </form>
+                          <ExternalLink size={16} />
+                        </Link>
+                        <form action={deleteProject.bind(null, project.publicId)}>
+                          <FormSubmitButton
+                            loadingText=""
+                            className="p-2 text-zinc-400 cursor-pointer hover:text-red-500 hover:bg-red-50 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 size={16} />
+                          </FormSubmitButton>
+                        </form>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Desktop Layout */}
-                  <div className="hidden md:grid grid-cols-[2fr_2fr_60px] items-center">
-                    <Link
-                      href={`/dashboard/analytics/${project.publicId}`}
-                      className="flex items-center gap-2 group/link min-w-0"
-                    >
-                      <span className="font-medium text-zinc-900 group-hover/link:text-primary transition-colors truncate">
-                        {project.name}
+                    {/* Desktop Layout */}
+                    <div className="hidden md:grid grid-cols-[2fr_2fr_60px] items-center">
+                      <Link
+                        href={`/dashboard/analytics/${project.publicId}`}
+                        className="flex items-center gap-2 group/link min-w-0"
+                      >
+                        <span className="font-medium text-zinc-900 group-hover/link:text-primary transition-colors truncate">
+                          {project.name}
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-zinc-300 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
+                      </Link>
+
+                      <span className="text-sm text-zinc-500 truncate">
+                        {project.domain}
                       </span>
-                      <ExternalLink className="w-3 h-3 text-zinc-300 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
-                    </Link>
 
-                    <span className="text-sm text-zinc-500 truncate">
-                      {project.domain}
-                    </span>
-
-                    <div className="flex justify-end">
-                      <form action={deleteProject.bind(null, project.publicId)}>
-                        <FormSubmitButton
-                          loadingText=""
-                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          <Trash2 size={14} />
-                        </FormSubmitButton>
-                      </form>
+                      <div className="flex justify-end">
+                        <form action={deleteProject.bind(null, project.publicId)}>
+                          <FormSubmitButton
+                            loadingText=""
+                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 size={14} />
+                          </FormSubmitButton>
+                        </form>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </section>
