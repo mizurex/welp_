@@ -4,15 +4,9 @@ import {
   Users,
   Clock,
   GitCompare,
-  LayoutGrid,
-  Target,
-  Filter,
-  Route,
-  RefreshCcw,
-  PieChart,
-  UsersRound,
   type LucideIcon,
   BarChart,
+  Settings,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -33,7 +27,7 @@ export const dashboardNavigation: NavigationSection[] = [
     title: "",
     items: [
       { title: "Projects", href: "/dashboard/analytics", icon: Eye },
-      { title: "Settings", href: "/dashboard/settings/", icon: LayoutGrid },
+      { title: "Settings", href: "/dashboard/settings/", icon: Settings },
     ],
   }
 ];

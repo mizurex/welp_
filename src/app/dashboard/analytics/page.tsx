@@ -7,6 +7,7 @@ import { EyeIcon } from "@/components/icons/eye";
 import { CreateProjectSheet } from "@/components/analytics/create-project-sheet";
 import { LayoutGrid, ExternalLink, Trash2 } from "lucide-react";
 import { deleteProject } from "@/lib/actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import type { User, Project, Analytics } from "@/types/models";
 
 type ProjectWithAnalytics = Project & { analytics: Analytics | null };
@@ -132,12 +133,12 @@ export default async function DashboardPage() {
                         <ExternalLink size={16} />
                       </Link>
                       <form action={deleteProject.bind(null, project.publicId)}>
-                        <button
-                          type="submit"
-                          className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                        <FormSubmitButton
+                          loadingText=""
+                          className="p-2 text-zinc-400 cursor-pointer hover:text-red-500 hover:bg-red-50 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <Trash2 size={16} />
-                        </button>
+                        </FormSubmitButton>
                       </form>
                     </div>
                   </div>
@@ -160,12 +161,12 @@ export default async function DashboardPage() {
 
                     <div className="flex justify-end">
                       <form action={deleteProject.bind(null, project.publicId)}>
-                        <button
-                          type="submit"
-                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                        <FormSubmitButton
+                          loadingText=""
+                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <Trash2 size={14} />
-                        </button>
+                        </FormSubmitButton>
                       </form>
                     </div>
                   </div>

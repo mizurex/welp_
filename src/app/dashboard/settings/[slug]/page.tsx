@@ -124,7 +124,7 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
               <form action={deleteProject.bind(null, project.publicId)}>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-400 rounded-md hover:bg-red-700 transition-colors"
+                  className=" py-2 text-sm font-medium text-white  rounded-md  transition-colors"
                 >
                   <FormSubmitButton loadingText="Deleting...">Delete</FormSubmitButton>
                 </button>

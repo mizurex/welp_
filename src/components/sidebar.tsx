@@ -16,17 +16,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
-
-import { createProject } from "@/lib/actions";
 import { Plus } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+
 import { useParams, useRouter } from "next/navigation";
 
 interface SidebarProps {
@@ -54,7 +45,7 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
     <>
       {/* Mobile Header - Only shows on mobile */}
       {isMobile && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-bg-primary border-b border-stone-200 px-4 py-1 flex items-center justify-between md:hidden">
+        <div className={cn("fixed top-0 left-0 right-0 z-50 bg-bg-primary shadow-sm px-4 py-1 flex items-center justify-between md:hidden", isMobileMenuOpen && "bg-transparent")}>
           <div className="flex items-center gap-3">
             <button
               onClick={toggleMobileMenu}
@@ -63,38 +54,27 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
             >
               <Menu className="size-5 text-foreground" />
             </button>
-            <span className="font-semibold text-foreground">
-              {activeProject?.name || "Welp Analytics"}
-            </span>
+         
           </div>
         </div>
       )}
-
-      {/* Backdrop for mobile */}
       {isMobile && isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30"
           onClick={closeMobileMenu}
         />
       )}
-
-      {/* Sidebar container */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 z-40 flex font-sans",
+          "fixed top-0 left-0 bottom-0 z-60 flex font-sans",
           "transform transition-transform duration-200",
           isMobile && !isMobileMenuOpen && "-translate-x-full",
           "md:translate-x-0",
           className
         )}
       >
-        {/* Icon Rail (thin left bar) */}
-
-
-        {/* Main Navigation Sidebar */}
         <div className="w-55 bg-bg-primary flex flex-col overflow-hidden">
 
-          {/* Mobile Close Button */}
           {isMobile && (
             <div className="flex items-center justify-between p-4 border-b border-stone-200">
               <span className="font-semibold text-sm text-foreground">Menu</span>
@@ -108,24 +88,44 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
             </div>
           )}
 
-          {/* Project Selector */}
           <div className="p-4 border-b border-stone-200 relative">
 
             <button
-              onClick={handleDropdown}
-              className="w-full cursor-pointer flex  justify-between border border-stone-200 hover:shadow-sm bg-muted  px-[8px] py-[4px] rounded-[6px] text-foreground  transition-all group"
+              onClick={projects.length > 0 ? handleDropdown : undefined}
+              disabled={projects.length === 0}
+              className={cn(
+                "w-full flex justify-between border border-stone-200 bg-muted px-[8px] py-[4px] rounded-[6px] text-foreground transition-all group",
+                projects.length > 0 
+                  ? "cursor-pointer hover:shadow-sm" 
+                  : " opacity-60"
+              )}
             >
               <div className="flex items-center gap-3">
                 <div>
-                  <Folder className="size-4" />
+                  <Folder className="size-4 text-muted-foreground" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-foreground/80 text-xs font-sans ">
-                    My Projects
-                  </span>
-                  <span className="truncate font-medium text-xs py-[2px] font-sans text-foreground/80 w-fit">
-                    {activeProject?.name || "Select Project"}
-                  </span>
+               
+
+                  {
+                    projects.length > 0 ?(
+                      <>
+                           <span className="font-bold text-foreground/80 text-xs font-sans ">
+                      My Projects
+                    </span>
+                      <span className="truncate font-medium text-xs py-[2px] font-sans text-foreground/80 w-fit">
+                        {activeProject?.name}
+                      </span>
+                      
+                      </>
+                 
+                    )
+                    : (
+                      <span className="truncate font-medium text-xs py-[2px] font-sans text-foreground/80 w-fit">
+                        No projects
+                      </span>
+                    )
+                  }
                 </div>
               </div>
 
@@ -140,9 +140,8 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
 
             </button>
 
-            {/* Dropdown Content */}
             <AnimatePresence>
-              {isDropdownOpen && (
+              {isDropdownOpen && projects.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: -4, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -173,71 +172,14 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
                     ))}
                   </div>
 
-                  <div className="border-t border-stone-100 mt-1 pt-1 pb-1">
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        setIsSheetOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-primary hover:bg-stone-50 transition-colors font-medium"
-                    >
-                      <Plus className="size-3" />
-                      Add new project
-                    </button>
-                  </div>
+                
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Add Project Sheet Integration */}
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetContent side="right" className="p-6">
-              <SheetHeader>
-                <SheetTitle>Create new project</SheetTitle>
-                <SheetDescription>
-                  Add a new project to start tracking its analytics.
-                </SheetDescription>
-              </SheetHeader>
-              <form
-                action={createProject}
-                className="mt-6 space-y-4"
-              >
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-900">
-                    Project name
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    placeholder="My website"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-900">
-                    Domain
-                  </label>
-                  <input
-                    type="text"
-                    name="domain"
-                    className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    placeholder="example.com"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors mt-4"
-                >
-                  Create Project
-                </button>
-              </form>
-            </SheetContent>
-          </Sheet>
+      
 
-          {/* Navigation Sections */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-6">
             {dashboardNavigation.map((section, index) => (
               <div key={section.title || index}>
@@ -246,7 +188,6 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
                 </h3>
                 <div className="space-y-0.5">
                   {section.items.map((item) => {
-                    // Hide Settings when no projects
                     if (item.title === "Settings" && projects.length === 0) return null;
                     const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                     const Icon = item.icon;
@@ -262,7 +203,7 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
                             : "text-foreground"
                         )}
                       >
-                        {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+                        {Icon && <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />}
                         <span>{item.title}</span>
                         {item.isNew && (
                           <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-black font-medium">
@@ -296,7 +237,7 @@ export function Sidebar({ className, projects = [] , user={name: "B", email: ""}
           </div>
         </div>
 
-        {/* Thin accent bar */}
+ 
         <div className="w-1.5 bg-gradient-to-b from-stone-200 via-stone-100 to-stone-200" />
       </div>
     </>
