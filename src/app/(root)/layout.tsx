@@ -18,6 +18,27 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Welp Analytics",
   description: "Simple, privacy-friendly website analytics",
+  openGraph: {
+    title: "Welp Analytics",
+    description: "Simple, privacy-friendly website analytics",
+    url: "https://www.trywelp.live",
+    siteName: "Welp Analytics",
+    images: [
+      {
+        url: "/welp.jpeg",
+        width: 1200,
+        height: 630,
+        alt: "Welp Analytics dashboard preview",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Welp Analytics",
+    description: "Simple, privacy-friendly website analytics",
+    images: ["/file.svg"],
+  },
 };
 
 export default function RootLayout({

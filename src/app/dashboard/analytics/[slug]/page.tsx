@@ -82,7 +82,6 @@ export default async function ProjectAnalyticsPage({
     trafficData = cachedMetrics.trafficData;
     topPages = cachedMetrics.topPages;
     topBrowsers = cachedMetrics.topBrowsers;
-    console.log('Cached metrics');
   } else {
     const dailyStatsRaw = await query<{ date: Date; type: string; count: number }>(
       `SELECT date_trunc('day', "createdAt") as "date", 'visitors' as "type", COUNT(*)::int as "count"
