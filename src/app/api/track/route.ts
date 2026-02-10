@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db/db";
 import type { Project, Analytics, Session } from "@/types/models";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 min

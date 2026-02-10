@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { nanoid } from "nanoid";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db/db";
 import type { User } from "@/types/models";
 
 function generatePublicId(prefix: string): string {

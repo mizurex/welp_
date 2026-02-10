@@ -1,8 +1,6 @@
-import Link from "next/link";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db/db";
 import { auth, signOut } from "../../../../../auth";
 import { notFound, redirect } from "next/navigation";
-import { DefaultBarChart } from "@/components/ui/default-bar-chart";
 import Block from "@/components/blocks";
 import { GaugeIcon } from "@/components/icons/clock";
 import { EyeIcon } from "@/components/icons/eye";
@@ -11,6 +9,7 @@ import { ActivityIcon } from "@/components/icons/chart_line";
 import { GradientBarMultipleChart } from "@/components/ui/gradient-bar-multiple-chart";
 import { Slash, Globe } from "lucide-react";
 import type { User, Project, Analytics } from "@/types/models";
+import { redis } from "@/lib/db/redis";
 
 type PageParams = Promise<{ slug: string }>;
 
@@ -36,11 +35,6 @@ export default async function ProjectAnalyticsPage({
 
   const email = session.user.email as string;
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-  // ============================================
-  // QUERY 1: Get project + analytics + verify owner (all in one!)
-  // ============================================
-  // JOINs combine multiple tables. We get project, analytics, AND verify the user owns it.
   const projectData = await queryOne<Project & Analytics & { analyticsId: number }>(
     `SELECT 
        p.*,
@@ -56,12 +50,10 @@ export default async function ProjectAnalyticsPage({
     [projectPublicId, email]
   );
 
-  // If no result = either project doesn't exist OR user doesn't own it
   if (!projectData || !projectData.analyticsId) {
     notFound();
   }
 
-  // Destructure for cleaner access
   const project = projectData;
   const analytics = {
     totalPageVisits: project.totalPageVisits,
@@ -70,82 +62,107 @@ export default async function ProjectAnalyticsPage({
     bounceRate: project.bounceRate,
   };
 
- 
-  const dailyStatsRaw = await query<{ date: Date; type: string; count: number }>(
-    `SELECT date_trunc('day', "createdAt") as "date", 'visitors' as "type", COUNT(*)::int as "count"
-     FROM "Session"
-     WHERE "projectId" = $1 AND "createdAt" >= $2
-     GROUP BY 1
-     UNION ALL
-     SELECT date_trunc('day', "timestamp") as "date", 'views' as "type", COUNT(*)::int as "count"
-     FROM "PageView"
-     WHERE "projectId" = $1 AND "timestamp" >= $2
-     GROUP BY 1
-     ORDER BY 1`,
-    [project.id, thirtyDaysAgo]
-  );
+  type TrafficPoint = { label: string; visitors: number; views: number };
+  type TopPage = { path: string; count: number };
+  type TopBrowser = { browser: string | null; count: number };
 
-  // Split the combined results
-  const visitorsByDayRaw = dailyStatsRaw.filter(r => r.type === 'visitors');
-  const viewsByDayRaw = dailyStatsRaw.filter(r => r.type === 'views');
+  const metricsCacheKey = `analytics:project-metrics:${project.id}`;
 
-  // Helper to normalize dates to YYYY-MM-DD
-  const normalizeDate = (d: Date) => d.toISOString().split('T')[0];
+  let trafficData: TrafficPoint[] = [];
+  let topPages: TopPage[] = [];
+  let topBrowsers: TopBrowser[] = [];
 
-  const dailyStats = new Map<string, { visitors: number; views: number }>();
+  const cachedMetrics = await redis.get<{
+    trafficData: TrafficPoint[];
+    topPages: TopPage[];
+    topBrowsers: TopBrowser[];
+  }>(metricsCacheKey);
 
-  // Initialize last 7 days with zeros so chart isn't empty
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    dailyStats.set(normalizeDate(d), { visitors: 0, views: 0 });
+  if (cachedMetrics) {
+    trafficData = cachedMetrics.trafficData;
+    topPages = cachedMetrics.topPages;
+    topBrowsers = cachedMetrics.topBrowsers;
+    console.log('Cached metrics');
+  } else {
+    const dailyStatsRaw = await query<{ date: Date; type: string; count: number }>(
+      `SELECT date_trunc('day', "createdAt") as "date", 'visitors' as "type", COUNT(*)::int as "count"
+       FROM "Session"
+       WHERE "projectId" = $1 AND "createdAt" >= $2
+       GROUP BY 1
+       UNION ALL
+       SELECT date_trunc('day', "timestamp") as "date", 'views' as "type", COUNT(*)::int as "count"
+       FROM "PageView"
+       WHERE "projectId" = $1 AND "timestamp" >= $2
+       GROUP BY 1
+       ORDER BY 1`,
+      [project.id, thirtyDaysAgo]
+    );
+
+    const visitorsByDayRaw = dailyStatsRaw.filter(r => r.type === 'visitors');
+    const viewsByDayRaw = dailyStatsRaw.filter(r => r.type === 'views');
+
+    const normalizeDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const dailyStats = new Map<string, { visitors: number; views: number }>();
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dailyStats.set(normalizeDate(d), { visitors: 0, views: 0 });
+    }
+
+    visitorsByDayRaw.forEach(item => {
+      const date = normalizeDate(item.date);
+      if (dailyStats.has(date)) {
+        dailyStats.get(date)!.visitors += item.count;
+      } else {
+        dailyStats.set(date, { visitors: item.count, views: 0 });
+      }
+    });
+
+    viewsByDayRaw.forEach(item => {
+      const date = normalizeDate(item.date);
+      if (dailyStats.has(date)) {
+        dailyStats.get(date)!.views += item.count;
+      } else {
+        dailyStats.set(date, { visitors: 0, views: item.count });
+      }
+    });
+
+    trafficData = Array.from(dailyStats.entries())
+      .map(([date, stats]) => ({
+        label: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }),
+        visitors: stats.visitors,
+        views: stats.views,
+      }))
+      .slice(-7); 
+
+    const [freshTopPages, freshTopBrowsers] = await Promise.all([
+      query<TopPage>(
+        `SELECT "path", COUNT(*)::int as "count"
+         FROM "PageView"
+         WHERE "projectId" = $1
+         GROUP BY "path"
+         ORDER BY "count" DESC
+         LIMIT 5`,
+        [project.id]
+      ),
+      query<TopBrowser>(
+        `SELECT "browser", COUNT(*)::int as "count"
+         FROM "PageView"
+         WHERE "projectId" = $1
+         GROUP BY "browser"
+         ORDER BY "count" DESC
+         LIMIT 5`,
+        [project.id]
+      ),
+    ]);
+
+    topPages = freshTopPages;
+    topBrowsers = freshTopBrowsers;
+
+    await redis.set(metricsCacheKey, { trafficData, topPages, topBrowsers }, { ex: 60 });
   }
-
-  visitorsByDayRaw.forEach(item => {
-    const date = normalizeDate(item.date);
-    if (dailyStats.has(date)) {
-      dailyStats.get(date)!.visitors += item.count;
-    } else {
-      dailyStats.set(date, { visitors: item.count, views: 0 });
-    }
-  });
-
-  viewsByDayRaw.forEach(item => {
-    const date = normalizeDate(item.date);
-    if (dailyStats.has(date)) {
-      dailyStats.get(date)!.views += item.count;
-    } else {
-      dailyStats.set(date, { visitors: 0, views: item.count });
-    }
-  });
-
-  const trafficData = Array.from(dailyStats.entries())
-    .map(([date, stats]) => ({
-      label: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }),
-      visitors: stats.visitors,
-      views: stats.views,
-    }))
-    .slice(-7); 
-  const [topPages, topBrowsers] = await Promise.all([
-    query<{ path: string; count: number }>(
-      `SELECT "path", COUNT(*)::int as "count"
-       FROM "PageView"
-       WHERE "projectId" = $1
-       GROUP BY "path"
-       ORDER BY "count" DESC
-       LIMIT 5`,
-      [project.id]
-    ),
-    query<{ browser: string | null; count: number }>(
-      `SELECT "browser", COUNT(*)::int as "count"
-       FROM "PageView"
-       WHERE "projectId" = $1
-       GROUP BY "browser"
-       ORDER BY "count" DESC
-       LIMIT 5`,
-      [project.id]
-    ),
-  ]);
 
 
   return (

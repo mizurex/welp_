@@ -1,5 +1,5 @@
 import { auth } from "../../../../../auth";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db/db";
 import { notFound, redirect } from "next/navigation";
 import { updateProject, updateProjectDomain, deleteProject } from "@/lib/actions";
 import TrackingScript from "@/components/analytics/tracking-script";

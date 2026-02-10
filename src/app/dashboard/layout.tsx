@@ -1,6 +1,6 @@
 import { MobileProvider } from "@/hooks/useMobile";
 import { Sidebar } from "@/components/sidebar";
-import { query } from "@/lib/db";
+import { query } from "@/lib/db/db";
 import { auth } from "../../../auth";
 import { redirect } from "next/navigation";
 import type { User, Project } from "@/types/models";

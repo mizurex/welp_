@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <Script 
           src="/tracker.js" 
-          data-project-id="prj_hiceqrbxpafmle47nab"
+          data-project-id="prj_ihkl02ofrymlfcgx5l"
           strategy="afterInteractive"
         />
 

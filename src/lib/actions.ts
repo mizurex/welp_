@@ -1,6 +1,6 @@
 "use server";
 
-import { query, queryOne, transaction } from "@/lib/db";
+import { query, queryOne, transaction } from "@/lib/db/db";
 import { auth } from "../../auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";

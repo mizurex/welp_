@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db/db";
 import { auth } from "../../../../auth";
 import { redirect } from "next/navigation";
 import Block from "@/components/blocks";
@@ -9,6 +9,7 @@ import { LayoutGrid, ExternalLink, Trash2, Search } from "lucide-react";
 import { deleteProject } from "@/lib/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import type { User, Project, Analytics } from "@/types/models";
+import {redis} from "@/lib/db/redis";
 
 type ProjectWithAnalytics = Project & { analytics: Analytics | null };
 
@@ -36,7 +37,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let projects: ProjectWithAnalytics[] = [];
 
   if (user) {
-    projects = await query<ProjectWithAnalytics>(
+    const cacheKey = `projects:${user.id}`;
+
+    const cachedProjects = await redis.get<ProjectWithAnalytics[]>(cacheKey);
+    if(cachedProjects) {
+      projects = cachedProjects;
+    }
+    else{
+        projects = await query<ProjectWithAnalytics>(
       `SELECT 
          p.*,
          json_build_object(
@@ -51,6 +59,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
        ORDER BY p."id" DESC`,
       [user.id]
     );
+
+    await redis.set(cacheKey, projects, { ex: 60 });
+    }
+
   }
 
   const resolvedSearchParams = await searchParams;
