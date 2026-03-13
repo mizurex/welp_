@@ -3,7 +3,7 @@ import { redis } from "@/lib/db/redis";
 import { query, queryOne } from "@/lib/db/db";
 import type { Project, Session } from "@/types/models";
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 500;
 const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 function parseUA(ua: string) {
