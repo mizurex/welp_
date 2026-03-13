@@ -100,7 +100,7 @@
     };
   }
 
-  /* ------------------ NETWORK ------------------ */
+  
 
   /* ------------------ HEARTBEAT ------------------ */
   // Track active time every 30 seconds to get accurate "Average Time"
